@@ -130,9 +130,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 observer.unobserve(entry.target);
             }
         });
-    }, { root: null, rootMargin: '0px', threshold: 0.15 });
+    }, { root: null, rootMargin: '0px', threshold: 0.05 });
 
     document.querySelectorAll('.fade-in').forEach(el => fadeObserver.observe(el));
+
+    // Mobile fallback: force all fade-in elements visible after 600ms
+    // Prevents products/sections from staying hidden if IntersectionObserver fails
+    if (window.innerWidth <= 768) {
+        setTimeout(() => {
+            document.querySelectorAll('.fade-in').forEach(el => {
+                el.classList.add('visible');
+            });
+        }, 600);
+    }
 
     /* ==========================================
        9. WIDGET DE PROVA SOCIAL (SCARCITY TOAST)
