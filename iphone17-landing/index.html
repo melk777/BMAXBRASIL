@@ -698,15 +698,15 @@
         <p id="toast-message" class="toast-message">Sofia de São Paulo acaba de garantir seu iPhone 17 Pro.</p>
     </div>
 
-    <script src="https://unpkg.com/imask"></script>
-    <script src="script.js"></script>
     <script src="https://sdk.mercadopago.com/js/v2"></script>
 
-<script src="https://sdk.mercadopago.com/js/v2"></script>
 <script>
-  const mp = new MercadoPago(APP_USR-9de90a44-43f6-400e-8229-31a7a7c64beb); // Use sua Public Key aqui
+  // Iniciamos o MP com a sua Public Key (Troque pela sua!)
+  const mp = new MercadoPago(APP_USR-9de90a44-43f6-400e-8229-31a7a7c64beb); 
 
+  // Escuta cliques no site todo
   document.addEventListener('click', async function (event) {
+    // Verifica se clicou no botão correto
     if (event.target.classList.contains('btn-reserva-venda')) {
       event.preventDefault();
       
@@ -714,31 +714,48 @@
       const nomeBase = botao.getAttribute('data-produto');
       const preco = botao.getAttribute('data-valor');
       const idCor = botao.getAttribute('data-cor-id');
-      const corSelecionada = document.getElementById(idCor).value;
+      
+      // Validação rápida: se o seletor de cor não existir, ele avisa
+      const seletor = document.getElementById(idCor);
+      if (!seletor) {
+        alert("Erro: Seletor de cor não encontrado para " + idCor);
+        return;
+      }
 
-      botao.innerText = "PROCESSANDO...";
-      botao.style.opacity = "0.5";
+      const cor = seletor.value;
+      botao.innerText = "AGUARDE...";
+      botao.disabled = true;
 
       try {
+        // Chamada para a API
         const response = await fetch('/api/checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            produto: nomeBase + " (" + corSelecionada + ")",
+            produto: nomeBase + " (" + cor + ")",
             valor: preco
           })
         });
 
+        if (!response.ok) {
+           const erroTexto = await response.text();
+           throw new Error("Erro na API: " + erroTexto);
+        }
+
         const data = await response.json();
         
         if (data.id) {
-          // Abre o checkout oficial do Mercado Pago
+          // Redireciona para o Checkout Oficial do Mercado Pago
           window.location.href = `https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=${data.id}`;
+        } else {
+          alert("Erro: O Mercado Pago não gerou o link de pagamento.");
         }
+
       } catch (err) {
-        alert("Erro ao iniciar pagamento. Tente novamente.");
+        console.error(err);
+        alert("Falha na conexão: " + err.message);
         botao.innerText = "RESERVAR UNIDADE";
-        botao.style.opacity = "1";
+        botao.disabled = false;
       }
     }
   });
