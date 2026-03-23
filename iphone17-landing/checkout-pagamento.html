@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BMAX BRASIL - Checkout Seguro</title>
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
+    <style>
+        body { font-family: -apple-system, sans-serif; background: #000; color: #fff; padding: 20px; }
+        .container { max-width: 500px; margin: 0 auto; background: #111; padding: 25px; border-radius: 15px; border: 1px solid #333; }
+        .product-info { border-bottom: 1px solid #333; margin-bottom: 20px; padding-bottom: 10px; }
+        .product-name { color: #0071e3; font-weight: bold; }
+        input, select { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; box-sizing: border-box; }
+        #form-checkout__submit { background: #0071e3; color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 20px; }
+        #form-checkout__submit:hover { background: #0077ed; }
+        .mp-container { margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="product-info">
+        <h3>Resumo da Reserva</h3>
+        <p id="display-item" class="product-name">Carregando produto...</p>
+        <p id="display-preco">R$ 0,00</p>
+    </div>
+
+    <form id="form-checkout">
+        <div id="form-checkout__cardNumber-container" class="mp-container"></div>
+        <div id="form-checkout__expirationDate-container" class="mp-container"></div>
+        <div id="form-checkout__securityCode-container" class="mp-container"></div>
+        
+        <input type="text" id="form-checkout__cardholderName" placeholder="Nome Impresso no Cartão" />
+        <input type="email" id="form-checkout__cardholderEmail" placeholder="E-mail" />
+        
+        <select id="form-checkout__issuer"></select>
+        <select id="form-checkout__installments"></select>
+        <select id="form-checkout__identificationType"></select>
+        <input type="text" id="form-checkout__identificationNumber" placeholder="CPF/CNPJ" />
+
+        <button type="submit" id="form-checkout__submit">FINALIZAR RESERVA</button>
+        <progress value="0" class="progress-bar">Carregando...</progress>
+    </form>
+</div>
+
+<script>
+    const mp = new MercadoPago(APP_USR-9de90a44-43f6-400e-8229-31a7a7c64beb); // COLOQUE SUA CHAVE AQUI
+
+    // 1. Pega os dados que vieram do botão do index.html
+    const urlParams = new URLSearchParams(window.location.search);
+    const itemNome = urlParams.get('item');
+    const itemPreco = urlParams.get('preco');
+
+    document.getElementById('display-item').innerText = itemNome;
+    document.getElementById('display-preco').innerText = "R$ " + itemPreco;
+
+    // 2. Inicializa o Checkout Transparente
+    const cardForm = mp.cardForm({
+        amount: itemPreco,
+        iframe: true,
+        form: {
+            id: "form-checkout",
+            cardNumber: { id: "form-checkout__cardNumber-container", placeholder: "Número do Cartão" },
+            expirationDate: { id: "form-checkout__expirationDate-container", placeholder: "MM/AA" },
+            securityCode: { id: "form-checkout__securityCode-container", placeholder: "CVC" },
+            cardholderName: { id: "form-checkout__cardholderName" },
+            issuer: { id: "form-checkout__issuer" },
+            installments: { id: "form-checkout__installments" },
+            identificationType: { id: "form-checkout__identificationType" },
+            identificationNumber: { id: "form-checkout__identificationNumber" },
+            cardholderEmail: { id: "form-checkout__cardholderEmail" },
+        },
+        callbacks: {
+            onFormMounted: error => { if (error) return console.warn("Erro no form:", error); },
+            onSubmit: event => {
+                event.preventDefault();
+                const { paymentMethodId, issuerId, installments, token, identificationNumber, identificationType, cardholderEmail } = cardForm.getCardFormData();
+
+                // 3. Envia os dados para sua API na Vercel processar o pagamento
+                fetch("/api/process-payment", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        token,
+                        issuerId,
+                        paymentMethodId,
+                        transactionAmount: Number(itemPreco),
+                        installments: Number(installments),
+                        description: itemNome,
+                        payer: { email: cardholderEmail, identification: { type: identificationType, number: identificationNumber } },
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if(data.status === 'approved') alert('Reserva Confirmada com Sucesso!');
+                    else alert('Pagamento não aprovado. Verifique os dados.');
+                });
+            },
+        },
+    });
+</script>
+
+</body>
+</html>
