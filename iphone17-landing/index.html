@@ -702,29 +702,46 @@
     <script src="script.js"></script>
     <script src="https://sdk.mercadopago.com/js/v2"></script>
 
+<script src="https://sdk.mercadopago.com/js/v2"></script>
 <script>
-document.addEventListener('click', function (event) {
-    // Verifica se o que foi clicado é o botão de reserva
-    if (event.target.classList.contains('btn-reserva-venda')) {
-        event.preventDefault();
-        
-        const botao = event.target;
-        const nomeBase = botao.getAttribute('data-produto');
-        const preco = botao.getAttribute('data-valor');
-        const idCor = botao.getAttribute('data-cor-id');
-        const seletorCor = document.getElementById(idCor);
+  const mp = new MercadoPago('SUA_CHAVE_PUBLICA'); // Use sua Public Key aqui
 
-        if (seletorCor) {
-            const corSelecionada = seletorCor.value;
-            const urlDestino = "checkout-pagamento.html?item=" + encodeURIComponent(nomeBase + " (" + corSelecionada + ")") + "&preco=" + preco;
-            
-            console.log("Redirecionando para: " + urlDestino);
-            window.location.href = urlDestino;
-        } else {
-            alert("Erro técnico: Seletor de cor não encontrado.");
+  document.addEventListener('click', async function (event) {
+    if (event.target.classList.contains('btn-reserva-venda')) {
+      event.preventDefault();
+      
+      const botao = event.target;
+      const nomeBase = botao.getAttribute('data-produto');
+      const preco = botao.getAttribute('data-valor');
+      const idCor = botao.getAttribute('data-cor-id');
+      const corSelecionada = document.getElementById(idCor).value;
+
+      botao.innerText = "PROCESSANDO...";
+      botao.style.opacity = "0.5";
+
+      try {
+        const response = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            produto: nomeBase + " (" + corSelecionada + ")",
+            valor: preco
+          })
+        });
+
+        const data = await response.json();
+        
+        if (data.id) {
+          // Abre o checkout oficial do Mercado Pago
+          window.location.href = `https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=${data.id}`;
         }
+      } catch (err) {
+        alert("Erro ao iniciar pagamento. Tente novamente.");
+        botao.innerText = "RESERVAR UNIDADE";
+        botao.style.opacity = "1";
+      }
     }
-}, false);
+  });
 </script>
 </body>
 </html>
