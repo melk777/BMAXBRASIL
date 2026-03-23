@@ -698,67 +698,55 @@
         <p id="toast-message" class="toast-message">Sofia de São Paulo acaba de garantir seu iPhone 17 Pro.</p>
     </div>
 
-    <script src="https://sdk.mercadopago.com/js/v2"></script>
+    <script>
+  // Iniciamos o teste
+  console.log("Sistema BMAX carregado e monitorando cliques.");
 
-<script>
-  // Iniciamos o MP com a sua Public Key (Troque pela sua!)
-  const mp = new MercadoPago(APP_USR-9de90a44-43f6-400e-8229-31a7a7c64beb); 
-
-  // Escuta cliques no site todo
-  document.addEventListener('click', async function (event) {
-    // Verifica se clicou no botão correto
-    if (event.target.classList.contains('btn-reserva-venda')) {
-      event.preventDefault();
+  document.addEventListener('click', function (event) {
+    // 1. O código verifica se você clicou em algo que contém a classe do seu botão
+    if (event.target.innerText === "RESERVAR UNIDADE" || event.target.classList.contains('btn-reserva-venda')) {
       
+      event.preventDefault();
+      alert("O clique no botão RESERVAR UNIDADE funcionou! Agora vou tentar falar com a Vercel...");
+
       const botao = event.target;
       const nomeBase = botao.getAttribute('data-produto');
       const preco = botao.getAttribute('data-valor');
       const idCor = botao.getAttribute('data-cor-id');
-      
-      // Validação rápida: se o seletor de cor não existir, ele avisa
       const seletor = document.getElementById(idCor);
+
       if (!seletor) {
-        alert("Erro: Seletor de cor não encontrado para " + idCor);
+        alert("Erro: Não encontrei o seletor de cores com o ID: " + idCor);
         return;
       }
 
-      const cor = seletor.value;
-      botao.innerText = "AGUARDE...";
-      botao.disabled = true;
-
-      try {
-        // Chamada para a API
-        const response = await fetch('/api/checkout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            produto: nomeBase + " (" + cor + ")",
-            valor: preco
-          })
-        });
-
-        if (!response.ok) {
-           const erroTexto = await response.text();
-           throw new Error("Erro na API: " + erroTexto);
-        }
-
-        const data = await response.json();
-        
-        if (data.id) {
-          // Redireciona para o Checkout Oficial do Mercado Pago
-          window.location.href = `https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=${data.id}`;
-        } else {
-          alert("Erro: O Mercado Pago não gerou o link de pagamento.");
-        }
-
-      } catch (err) {
-        console.error(err);
-        alert("Falha na conexão: " + err.message);
-        botao.innerText = "RESERVAR UNIDADE";
-        botao.disabled = false;
-      }
+      // Se chegou aqui, o clique está perfeito. Vamos tentar abrir o Mercado Pago:
+      enviarParaMercadoPago(nomeBase, seletor.value, preco);
     }
   });
+
+  async function enviarParaMercadoPago(produto, cor, valor) {
+    try {
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          produto: produto + " (" + cor + ")",
+          valor: valor
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.id) {
+        window.location.href = `https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=${data.id}`;
+      } else {
+        alert("A Vercel respondeu, mas o Mercado Pago não gerou o link. Erro: " + (data.error || "Desconhecido"));
+      }
+    } catch (err) {
+      alert("Erro crítico: O site não conseguiu falar com a pasta /api/checkout.js. Verifique se o arquivo existe no GitHub.");
+    }
+  }
 </script>
 </body>
 </html>
