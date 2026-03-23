@@ -1,36 +1,41 @@
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 
-const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
+const client = new MercadoPagoConfig({ 
+  accessToken: process.env.MP_ACCESS_TOKEN 
+});
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).send();
+  if (req.method !== 'POST') return res.status(405).json({ message: 'Método não permitido' });
 
   try {
     const preference = new Preference(client);
-    const body = req.body;
+    const { produto, valor } = req.body; // Pega o nome e o preço enviados pelo botão
 
     const result = await preference.create({
       body: {
         items: [
           {
-            title: body.produto,
-            unit_price: Number(body.valor),
+            title: produto,
+            unit_price: Number(valor),
             quantity: 1,
             currency_id: 'BRL'
           }
         ],
-        // Opcional: Para onde o cliente vai depois de pagar
+        // Importante: Isso garante que o cliente volte ao seu site
         back_urls: {
-          success: "https://seusite.vercel.app/sucesso",
-          failure: "https://seusite.vercel.app/erro",
-          pending: "https://seusite.vercel.app/pendente"
+          success: "https://seusite.vercel.app", 
+          failure: "https://seusite.vercel.app",
+          pending: "https://seusite.vercel.app"
         },
         auto_return: "approved",
       }
     });
 
-    res.status(200).json({ id: result.id });
+    // Retorna o ID da preferência para o site abrir o checkout
+    return res.status(200).json({ id: result.id });
+
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Erro MP:", error);
+    return res.status(500).json({ error: error.message });
   }
 }
