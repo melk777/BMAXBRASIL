@@ -703,34 +703,28 @@
     <script src="https://sdk.mercadopago.com/js/v2"></script>
 
 <script>
-  // Garantimos que o script só rode depois que a página carregar toda
-  window.addEventListener('load', function() {
-    console.log("Sistema BMAX Iniciado");
-
-    const botoes = document.querySelectorAll('.btn-reserva-venda');
-    
-    botoes.forEach(botao => {
-      botao.onclick = function(e) {
-        e.preventDefault();
+document.addEventListener('click', function (event) {
+    // Verifica se o que foi clicado é o botão de reserva
+    if (event.target.classList.contains('btn-reserva-venda')) {
+        event.preventDefault();
         
-        const nomeBase = this.getAttribute('data-produto');
-        const preco = this.getAttribute('data-valor');
-        const idCor = this.getAttribute('data-cor-id');
+        const botao = event.target;
+        const nomeBase = botao.getAttribute('data-produto');
+        const preco = botao.getAttribute('data-valor');
+        const idCor = botao.getAttribute('data-cor-id');
         const seletorCor = document.getElementById(idCor);
-        
-        if (!seletorCor) {
-            console.error("Seletor não encontrado:", idCor);
-            return;
-        }
 
-        const corSelecionada = seletorCor.value;
-        const urlDestino = `checkout-pagamento.html?item=${encodeURIComponent(nomeBase + " (" + corSelecionada + ")")}&preco=${preco}`;
-        
-        console.log("Redirecionando para:", urlDestino);
-        window.location.href = urlDestino;
-      };
-    });
-  });
+        if (seletorCor) {
+            const corSelecionada = seletorCor.value;
+            const urlDestino = "checkout-pagamento.html?item=" + encodeURIComponent(nomeBase + " (" + corSelecionada + ")") + "&preco=" + preco;
+            
+            console.log("Redirecionando para: " + urlDestino);
+            window.location.href = urlDestino;
+        } else {
+            alert("Erro técnico: Seletor de cor não encontrado.");
+        }
+    }
+}, false);
 </script>
 </body>
 </html>
