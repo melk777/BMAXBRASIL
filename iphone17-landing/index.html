@@ -42,7 +42,7 @@
 </head>
     <script src="https://sdk.mercadopago.com/js/v2"></script>
 <script>
-  const mp = new MercadoPago(APP_USR-9de90a44-43f6-400e-8229-31a7a7c64beb); 
+  const mp = new MercadoPago(APP_USR-9de90a44-43f6-400e-8229-31a7a7c64beb); // Sua Public Key aqui
 
   document.querySelectorAll('.btn-reserva-venda').forEach(botao => {
     botao.addEventListener('click', async (e) => {
@@ -53,23 +53,15 @@
       const idCor = botao.getAttribute('data-cor-id');
       const corSelecionada = document.getElementById(idCor).value;
       
-      try {
-        const response = await fetch('/api/checkout', { 
-          method: 'POST',
-          body: JSON.stringify({ 
-            produto: `${nomeBase} (${corSelecionada})`, 
-            valor: preco 
-          }),
-          headers: { 'Content-Type': 'application/json' }
-        });
-        
-        const data = await response.json();
-        if (data.id) {
-          mp.checkout({ preferenceId: data.id, autoOpen: true });
-        }
-      } catch (err) {
-        console.error("Erro:", err);
-      }
+      // No Transparente, redirecionamos para uma página de checkout interna sua
+      // ou abrimos um formulário de pagamento no próprio site.
+      // Vamos enviar para sua página de checkout passando o produto e valor na URL:
+      const params = new URLSearchParams({
+        item: `${nomeBase} (${corSelecionada})`,
+        preco: preco
+      });
+      
+      window.location.href = `/checkout-pagamento.html?${params.toString()}`;
     });
   });
 </script>
