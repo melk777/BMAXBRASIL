@@ -1,5 +1,29 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+    <style>
+        .seletor-cor-luxo {
+            width: 100%;
+            padding: 12px;
+            background: #000; /* Fundo preto para combinar com o site */
+            color: #fff;
+            border: 1px solid #0071e3; /* Azul Apple */
+            border-radius: 8px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            font-size: 1rem;
+            appearance: none; /* Remove a seta padrão do navegador */
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 1em;
+        }
+
+        .seletor-cor-luxo:focus {
+            outline: none;
+            border-color: #5ac8fa;
+            box-shadow: 0 0 5px rgba(0, 113, 227, 0.5);
+        }
+    </style>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,7 +38,41 @@
     <script type="module" src="https://unpkg.com/@splinetool/viewer/build/spline-viewer.js"></script>
 
     <link rel="stylesheet" href="style.css">
+    
 </head>
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
+<script>
+  const mp = new MercadoPago(APP_USR-9de90a44-43f6-400e-8229-31a7a7c64beb); 
+
+  document.querySelectorAll('.btn-reserva-venda').forEach(botao => {
+    botao.addEventListener('click', async (e) => {
+      e.preventDefault();
+      
+      const nomeBase = botao.getAttribute('data-produto');
+      const preco = botao.getAttribute('data-valor');
+      const idCor = botao.getAttribute('data-cor-id');
+      const corSelecionada = document.getElementById(idCor).value;
+      
+      try {
+        const response = await fetch('/api/checkout', { 
+          method: 'POST',
+          body: JSON.stringify({ 
+            produto: `${nomeBase} (${corSelecionada})`, 
+            valor: preco 
+          }),
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        if (data.id) {
+          mp.checkout({ preferenceId: data.id, autoOpen: true });
+        }
+      } catch (err) {
+        console.error("Erro:", err);
+      }
+    });
+  });
+</script>
 <body>
     
     <nav class="navbar" id="navbar">
@@ -105,7 +163,8 @@
                     <h3 style="font-size: 1.15rem; min-height: 55px;">Celular Apple iPhone 17 Pro Max 256GB</h3>
                     <p class="product-price-card">Parcelado: R$ 9.195</p>
                     <p class="product-price-pix">R$ 8.735 <span>no PIX (-5%)</span></p>
-                   <a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17 Pro Max 256GB" data-valor="9195.00">RESERVAR UNIDADE</a>
+                   <select id="cor-1" class="seletor-cor-luxo"><option value="Preto">Preto</option><option value="Branco">Branco</option><option value="Laranja">Laranja</option></select>
+<a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17 Pro Max 256GB" data-valor="9195.00" data-cor-id="cor-1">RESERVAR UNIDADE</a>
                 </div>
                 
                 <div class="product-card">
@@ -125,7 +184,8 @@
                     <h3 style="font-size: 1.15rem; min-height: 55px;">Celular Apple iPhone 17 256GB</h3>
                     <p class="product-price-card">Parcelado: R$ 5.717</p>
                     <p class="product-price-pix">R$ 5.431 <span>no PIX (-5%)</span></p>
-                    <a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17 256GB" data-valor="5717.00">RESERVAR UNIDADE</a>
+                   <select id="cor-2" class="seletor-cor-luxo"><option value="Branco">Branco</option><option value="Preto">Preto</option><option value="Rosa">Rosa</option><option value="Verde">Verde</option><option value="Azul">Azul</option></select>
+<a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17 256GB" data-valor="5717.00" data-cor-id="cor-2">RESERVAR UNIDADE</a>
                 </div>
 
                 <div class="product-card">
@@ -143,7 +203,8 @@
                     <h3 style="font-size: 1.15rem; min-height: 55px;">Celular Apple iPhone 17 Pro 256GB</h3>
                     <p class="product-price-card">Parcelado: R$ 8.372</p>
                     <p class="product-price-pix">R$ 7.955 <span>no PIX (-5%)</span></p>
-                    <a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17 Pro 256GB" data-valor="8372.00">RESERVAR UNIDADE</a>
+                   <select id="cor-3" class="seletor-cor-luxo"><option value="Preto">Preto</option><option value="Branco">Branco</option><option value="Laranja">Laranja</option></select>
+<a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17 Pro 256GB" data-valor="8372.00" data-cor-id="cor-3">RESERVAR UNIDADE</a>
                 </div>
 
                 <div class="product-card">
@@ -161,7 +222,8 @@
                     <h3 style="font-size: 1.15rem; min-height: 55px;">Celular Apple iPhone 17 Pro Max 512GB</h3>
                     <p class="product-price-card">Parcelado: R$ 11.035</p>
                     <p class="product-price-pix">R$ 10.483 <span>no PIX (-5%)</span></p>
-                    <a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17 Pro Max 512GB" data-valor="11035.00">RESERVAR UNIDADE</a>
+                   <select id="cor-4" class="seletor-cor-luxo"><option value="Preto">Preto</option><option value="Branco">Branco</option><option value="Laranja">Laranja</option></select>
+<a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17 Pro Max 512GB" data-valor="10483.00" data-cor-id="cor-4">RESERVAR UNIDADE</a>
                 </div>
 
                 <div class="product-card">
@@ -179,7 +241,8 @@
                     <h3 style="font-size: 1.15rem; min-height: 55px;">Celular Apple iPhone 17 Pro 512GB</h3>
                     <p class="product-price-card">Parcelado: R$ 9.951</p>
                     <p class="product-price-pix">R$ 9.454 <span>no PIX (-5%)</span></p>
-                    <a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17 Pro 512GB" data-valor="9951.00">RESERVAR UNIDADE</a>
+                    <select id="cor-5" class="seletor-cor-luxo"><option value="Preto">Preto</option><option value="Branco">Branco</option><option value="Laranja">Laranja</option></select>
+<a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17 Pro 512GB" data-valor="9454.00" data-cor-id="cor-5">RESERVAR UNIDADE</a>
                 </div>
 
                 <div class="product-card">
@@ -197,7 +260,8 @@
                     <h3 style="font-size: 1.15rem; min-height: 55px;">Celular Apple iPhone 17 Pro Max 1TB</h3>
                     <p class="product-price-card">Parcelado: R$ 11.770</p>
                     <p class="product-price-pix">R$ 11.181 <span>no PIX (-5%)</span></p>
-                   <a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17 Pro Max 1TB" data-valor="11770.00">RESERVAR UNIDADE</a>
+                   <select id="cor-6" class="seletor-cor-luxo"><option value="Preto">Preto</option><option value="Branco">Branco</option><option value="Laranja">Laranja</option></select>
+<a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17 Pro Max 1TB" data-valor="11181.00" data-cor-id="cor-6">RESERVAR UNIDADE</a>
                 </div>
 
                 <div class="product-card">
@@ -215,7 +279,8 @@
                     <h3 style="font-size: 1.15rem; min-height: 55px;">Celular Apple iPhone 17 Pro 1TB</h3>
                     <p class="product-price-card">Parcelado: R$ 11.067</p>
                     <p class="product-price-pix">R$ 10.514 <span>no PIX (-5%)</span></p>
-                    <a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17 Pro 1TB" data-valor="11067.00">RESERVAR UNIDADE</a>
+                    <select id="cor-7" class="seletor-cor-luxo"><option value="Preto">Preto</option><option value="Branco">Branco</option><option value="Laranja">Laranja</option></select>
+<a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17 Pro 1TB" data-valor="10514.00" data-cor-id="cor-7">RESERVAR UNIDADE</a>
                 </div>
 
                 <div class="product-card">
@@ -233,7 +298,8 @@
                     <h3 style="font-size: 1.15rem; min-height: 55px;">Celular Apple iPhone 17e 256GB</h3>
                     <p class="product-price-card">Parcelado: R$ 4.066</p>
                     <p class="product-price-pix">R$ 3.862 <span>no PIX (-5%)</span></p>
-                    <a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17e 256GB" data-valor="4066.00">RESERVAR UNIDADE</a>
+                    <select id="cor-8" class="seletor-cor-luxo"><option value="Rosa">Rosa</option><option value="Preto">Preto</option><option value="Branco">Branco</option></select>
+<a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17e 256GB" data-valor="3862.00" data-cor-id="cor-8">RESERVAR UNIDADE</a>
                 </div>
 
                 <div class="product-card">
@@ -251,7 +317,8 @@
                     <h3 style="font-size: 1.15rem; min-height: 55px;">Celular Apple iPhone Air 256GB</h3>
                     <p class="product-price-card">Parcelado: R$ 6.112</p>
                     <p class="product-price-pix">R$ 5.806 <span>no PIX (-5%)</span></p>
-                    <a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone Air 256GB" data-valor="6112.00">RESERVAR UNIDADE</a>
+                   <select id="cor-9" class="seletor-cor-luxo"><option value="Azul">Azul</option><option value="Preto">Preto</option><option value="Branco">Branco</option></select>
+<a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone Air 256GB" data-valor="5806.00" data-cor-id="cor-9">RESERVAR UNIDADE</a>
                 </div>
 
             </div>
