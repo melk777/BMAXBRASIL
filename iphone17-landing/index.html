@@ -17,9 +17,33 @@
 </head>
 <body>
     
-    <nav class="navbar">
-        <div class="logo"> <span>BmaxBrasil</span></div>
-        <a href="#captura" class="nav-vip-btn">Acesso VIP</a>
+    <nav class="navbar" id="navbar">
+        <div class="logo">
+            <i class="ph ph-apple-logo"></i>
+            <span>BmaxBrasil</span>
+        </div>
+
+        <div class="nav-links" id="nav-menu">
+            <a href="#produtos" class="nav-link">
+                <i class="ph ph-device-mobile"></i>
+                Catálogo
+            </a>
+            <a href="#captura" class="nav-link">
+                <i class="ph ph-envelope-simple"></i>
+                Contato
+            </a>
+            <div class="nav-search-container">
+                <i class="ph ph-magnifying-glass"></i>
+                <input type="text" id="navbar-search" placeholder="Buscar..." autocomplete="off">
+            </div>
+        </div>
+
+        <div class="nav-actions">
+            <a href="#captura" class="nav-vip-btn">Acesso VIP</a>
+            <button class="mobile-toggle" id="mobile-toggle">
+                <i class="ph ph-list"></i>
+            </button>
+        </div>
     </nav>
 
     <!-- 1. HERO BANNER -->

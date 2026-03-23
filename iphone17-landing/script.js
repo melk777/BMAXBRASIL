@@ -13,13 +13,17 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Em um projeto real, se acessar a API do spline: splineViewer.application...
         // Aqui usamos CSS dinâmico no wrapper para uma experiência de profundidade suave e imersiva.
-        if (scrollY < window.innerHeight) {
-            // translate Y down slowly (parallax), rotate slightly across X/Y axis to give a 3D float feeling
-            const yPos = scrollY * 0.4;
-            const rotationX = scrollY * -0.02; // Inclina suavemente
-            const scale = 1 + (scrollY * 0.0002);
+        if (scrollY < window.innerHeight && window.innerWidth > 768) {
+            // Passive vertical parallax only for desktop
+            // No -50% offsets because it's already positioned by Grid
+            const yPos = scrollY * 0.25;
+            const rotationX = scrollY * -0.01;
+            const scale = 1 + (scrollY * 0.0001);
             
-            splineContainer.style.transform = `translate3d(-50%, calc(-50% + ${yPos}px), 0) rotateX(${rotationX}deg) scale(${scale})`;
+            splineContainer.style.transform = `translate3d(0, ${yPos}px, 0) rotateX(${rotationX}deg) scale(${scale})`;
+        } else if (window.innerWidth <= 768) {
+            // Ensure no transform conflict on mobile
+            splineContainer.style.transform = 'none';
         }
     });
 
@@ -184,6 +188,58 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial appearance after 5-10s
     setTimeout(showToast, Math.floor(Math.random() * 5000) + 5000);
+
+    /* ==========================================
+       10. MOBILE MENU TOGGLE
+    ============================================= */
+    const mobileToggle = document.getElementById('mobile-toggle');
+    const navMenu = document.getElementById('nav-menu');
+    
+    if (mobileToggle && navMenu) {
+        mobileToggle.addEventListener('click', () => {
+            navMenu.classList.toggle('active');
+            const icon = mobileToggle.querySelector('i');
+            if (navMenu.classList.contains('active')) {
+                icon.classList.replace('ph-list', 'ph-x');
+            } else {
+                icon.classList.replace('ph-x', 'ph-list');
+            }
+        });
+
+        // Close menu on link click
+        navMenu.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                navMenu.classList.remove('active');
+                mobileToggle.querySelector('i').classList.replace('ph-x', 'ph-list');
+            });
+        });
+    }
+
+    /* ==========================================
+       11. PRODUCT SEARCH FILTER
+    ============================================= */
+    const searchInput = document.getElementById('navbar-search');
+    const products = document.querySelectorAll('.product-card');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase().trim();
+            
+            products.forEach(card => {
+                const title = card.querySelector('h3').textContent.toLowerCase();
+                if (title.includes(term)) {
+                    card.classList.remove('hidden-search');
+                } else {
+                    card.classList.add('hidden-search');
+                }
+            });
+
+            // Smooth scroll to products if user is searching and not there
+            if (term.length > 2 && window.scrollY < 500) {
+                document.getElementById('produtos').scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    }
 
 });
 
