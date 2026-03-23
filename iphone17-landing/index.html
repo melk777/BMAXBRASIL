@@ -667,19 +667,53 @@
         </div>
     </footer>
 
-    <!-- WIDGET DE PROVA SOCIAL (TOAST NOTIFICATION) -->
-    <div id="sales-toast" class="sales-toast">
-        <i class="ph-fill ph-check-circle toast-icon"></i>
-        <p id="toast-message" class="toast-message">Sofia de São Paulo acaba de garantir seu iPhone 17 Pro.</p>
-    </div>
+   <div id="sales-toast" class="sales-toast">
+    <i class="ph-fill ph-check-circle toast-icon"></i>
+    <p id="toast-message" class="toast-message">Sofia de São Paulo acaba de garantir seu iPhone 17 Pro.</p>
+</div>
 
+<script>
+  // ... seu código do Mercado Pago que já está aí ...
+
+  // ADICIONE ISSO LOGO ABAIXO:
+  const sales = [
+      "Marcos de Brasília garantiu o último Pro Max Grafite.",
+      "Júlia de Curitiba acabou de reservar sua unidade.",
+      "Felipe de BH entrou no Grupo VIP agora.",
+      "Lucas de SP garantiu um iPhone 17 Pro."
+  ];
+
+  function showToast() {
+      const toast = document.getElementById('sales-toast');
+      const msg = document.getElementById('toast-message');
+      
+      if(!toast || !msg) return; // Segurança para não dar erro
+
+      msg.innerText = sales[Math.floor(Math.random() * sales.length)];
+      
+      toast.classList.add('show');
+      setTimeout(() => {
+          toast.classList.remove('show');
+      }, 5000); // Fica visível por 5 segundos
+  }
+
+  // Primeira execução após 10 segundos que a página abrir
+  setTimeout(showToast, 10000);
+
+  // Repete em intervalos aleatórios
+  setInterval(showToast, Math.random() * (25000 - 15000) + 15000);
+</script>
     <script src="https://sdk.mercadopago.com/js/v2"></script>
 <script>
-  const mp = new MercadoPago(APP_USR-9de90a44-43f6-400e-8229-31a7a7c64beb); // <--- COLOQUE SUA PUBLIC KEY AQUI
+  const mp = new MercadoPago(REMOVIDO POR SEGURANCA); // <--- COLOQUE SUA PUBLIC KEY AQUI
 
-  document.addEventListener('click', async function (event) {
-    if (event.target.classList.contains('btn-reserva-venda') || event.target.innerText === "RESERVAR UNIDADE") {
-      event.preventDefault();
+ // Substitua o início do evento por este para ser mais preciso:
+document.addEventListener('click', async function (event) {
+    const botao = event.target.closest('.btn-reserva-venda'); // Captura o botão mesmo se clicar no texto/ícone interno
+    if (!botao) return; 
+
+    event.preventDefault();
+    // ... restante do código
       
       const botao = event.target;
       const nomeBase = botao.getAttribute('data-produto');
