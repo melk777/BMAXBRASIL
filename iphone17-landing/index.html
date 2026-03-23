@@ -703,45 +703,32 @@
     <script src="https://sdk.mercadopago.com/js/v2"></script>
 
 <script>
-  // ATENÇÃO: Substitua 'SUA_CHAVE_PUBLICA' pela sua Public Key (aquela que começa com APP_USR-)
-  const mp = new MercadoPago(APP_USR-9de90a44-43f6-400e-8229-31a7a7c64beb); 
+  // Garantimos que o script só rode depois que a página carregar toda
+  window.addEventListener('load', function() {
+    console.log("Sistema BMAX Iniciado");
 
-  // Script inteligente que identifica qual dos 9 botões foi clicado
-  document.querySelectorAll('.btn-reserva-venda').forEach(botao => {
-    botao.addEventListener('click', async (e) => {
-      e.preventDefault();
-      
-      const nome = botao.getAttribute('data-produto');
-      const preco = botao.getAttribute('data-valor');
-      
-      // Desativa o botão temporariamente para evitar cliques duplos
-      botao.style.opacity = "0.5";
-      botao.innerText = "Processando...";
-
-      try {
-        // Envia os dados para a sua API na Vercel
-        const response = await fetch('/api/checkout', { 
-          method: 'POST',
-          body: JSON.stringify({ produto: nome, valor: preco }),
-          headers: { 'Content-Type': 'application/json' }
-        });
+    const botoes = document.querySelectorAll('.btn-reserva-venda');
+    
+    botoes.forEach(botao => {
+      botao.onclick = function(e) {
+        e.preventDefault();
         
-        const data = await response.json();
-
-        if (data.id) {
-          // Abre o checkout de luxo por cima do site
-          mp.checkout({
-            preferenceId: data.id,
-            autoOpen: true
-          });
+        const nomeBase = this.getAttribute('data-produto');
+        const preco = this.getAttribute('data-valor');
+        const idCor = this.getAttribute('data-cor-id');
+        const seletorCor = document.getElementById(idCor);
+        
+        if (!seletorCor) {
+            console.error("Seletor não encontrado:", idCor);
+            return;
         }
-      } catch (err) {
-        console.error("Erro na reserva:", err);
-        alert("Erro ao conectar com o Mercado Pago. Tente novamente.");
-      } finally {
-        botao.style.opacity = "1";
-        botao.innerText = "RESERVAR UNIDADE";
-      }
+
+        const corSelecionada = seletorCor.value;
+        const urlDestino = `checkout-pagamento.html?item=${encodeURIComponent(nomeBase + " (" + corSelecionada + ")")}&preco=${preco}`;
+        
+        console.log("Redirecionando para:", urlDestino);
+        window.location.href = urlDestino;
+      };
     });
   });
 </script>
