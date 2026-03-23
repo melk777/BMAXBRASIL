@@ -1,19 +1,17 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-    <html lang="pt-BR">
     <style>
-        /* Estilo que você já tinha (Seletor de Cores) */
         .seletor-cor-luxo {
             width: 100%;
             padding: 12px;
-            background: #000; 
+            background: #000; /* Fundo preto para combinar com o site */
             color: #fff;
-            border: 1px solid #0071e3; 
+            border: 1px solid #0071e3; /* Azul Apple */
             border-radius: 8px;
             margin-bottom: 15px;
             cursor: pointer;
             font-size: 1rem;
-            appearance: none; 
+            appearance: none; /* Remove a seta padrão do navegador */
             background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
             background-repeat: no-repeat;
             background-position: right 10px center;
@@ -24,44 +22,6 @@
             outline: none;
             border-color: #5ac8fa;
             box-shadow: 0 0 5px rgba(0, 113, 227, 0.5);
-        }
-
-        /* --- NOVO: Estilo do Toast de Vendas (Notificação de Prova Social) --- */
-        .sales-toast {
-            position: fixed;
-            bottom: 25px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.95); /* Branco levemente transparente para luxo */
-            backdrop-filter: blur(10px); /* Efeito de vidro fosco */
-            color: #1d1d1f;
-            padding: 12px 18px;
-            border-radius: 14px;
-            box-shadow: 0 12px 40px rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            z-index: 10000;
-            transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
-            opacity: 0;
-            transform: translateX(-50px); /* Ele entra pela lateral agora, estilo iOS */
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-
-        .sales-toast.show {
-            opacity: 1;
-            transform: translateX(0);
-        }
-
-        .toast-icon { 
-            color: #0071e3; 
-            font-size: 1.4rem; 
-        }
-
-        .toast-message { 
-            font-size: 0.85rem; 
-            margin: 0; 
-            font-weight: 500; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
     </style>
 <head>
@@ -707,53 +667,19 @@
         </div>
     </footer>
 
-   <div id="sales-toast" class="sales-toast">
-    <i class="ph-fill ph-check-circle toast-icon"></i>
-    <p id="toast-message" class="toast-message">Sofia de São Paulo acaba de garantir seu iPhone 17 Pro.</p>
-</div>
+    <!-- WIDGET DE PROVA SOCIAL (TOAST NOTIFICATION) -->
+    <div id="sales-toast" class="sales-toast">
+        <i class="ph-fill ph-check-circle toast-icon"></i>
+        <p id="toast-message" class="toast-message">Sofia de São Paulo acaba de garantir seu iPhone 17 Pro.</p>
+    </div>
 
-<script>
-  // ... seu código do Mercado Pago que já está aí ...
-
-  // ADICIONE ISSO LOGO ABAIXO:
-  const sales = [
-      "Marcos de Brasília garantiu o último Pro Max Grafite.",
-      "Júlia de Curitiba acabou de reservar sua unidade.",
-      "Felipe de BH entrou no Grupo VIP agora.",
-      "Lucas de SP garantiu um iPhone 17 Pro."
-  ];
-
-  function showToast() {
-      const toast = document.getElementById('sales-toast');
-      const msg = document.getElementById('toast-message');
-      
-      if(!toast || !msg) return; // Segurança para não dar erro
-
-      msg.innerText = sales[Math.floor(Math.random() * sales.length)];
-      
-      toast.classList.add('show');
-      setTimeout(() => {
-          toast.classList.remove('show');
-      }, 5000); // Fica visível por 5 segundos
-  }
-
-  // Primeira execução após 10 segundos que a página abrir
-  setTimeout(showToast, 10000);
-
-  // Repete em intervalos aleatórios
-  setInterval(showToast, Math.random() * (25000 - 15000) + 15000);
-</script>
     <script src="https://sdk.mercadopago.com/js/v2"></script>
 <script>
-  const mp = new MercadoPago(REMOVIDO POR SEGURANCA); // <--- COLOQUE SUA PUBLIC KEY AQUI
+  const mp = new MercadoPago(APP_USR-9de90a44-43f6-400e-8229-31a7a7c64beb); // <--- COLOQUE SUA PUBLIC KEY AQUI
 
- // Substitua o início do evento por este para ser mais preciso:
-document.addEventListener('click', async function (event) {
-    const botao = event.target.closest('.btn-reserva-venda'); // Captura o botão mesmo se clicar no texto/ícone interno
-    if (!botao) return; 
-
-    event.preventDefault();
-    // ... restante do código
+  document.addEventListener('click', async function (event) {
+    if (event.target.classList.contains('btn-reserva-venda') || event.target.innerText === "RESERVAR UNIDADE") {
+      event.preventDefault();
       
       const botao = event.target;
       const nomeBase = botao.getAttribute('data-produto');
