@@ -40,31 +40,6 @@
     <link rel="stylesheet" href="style.css">
     
 </head>
-    <script src="https://sdk.mercadopago.com/js/v2"></script>
-<script>
-  const mp = new MercadoPago(APP_USR-9de90a44-43f6-400e-8229-31a7a7c64beb); // Sua Public Key aqui
-
-  document.querySelectorAll('.btn-reserva-venda').forEach(botao => {
-    botao.addEventListener('click', async (e) => {
-      e.preventDefault();
-      
-      const nomeBase = botao.getAttribute('data-produto');
-      const preco = botao.getAttribute('data-valor');
-      const idCor = botao.getAttribute('data-cor-id');
-      const corSelecionada = document.getElementById(idCor).value;
-      
-      // No Transparente, redirecionamos para uma página de checkout interna sua
-      // ou abrimos um formulário de pagamento no próprio site.
-      // Vamos enviar para sua página de checkout passando o produto e valor na URL:
-      const params = new URLSearchParams({
-        item: `${nomeBase} (${corSelecionada})`,
-        preco: preco
-      });
-      
-      window.location.href = `/checkout-pagamento.html?${params.toString()}`;
-    });
-  });
-</script>
 <body>
     
     <nav class="navbar" id="navbar">
