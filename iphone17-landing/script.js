@@ -339,6 +339,39 @@ document.addEventListener('DOMContentLoaded', () => {
     /* ==========================================
        12. CHECKOUT MERCADO PAGO (preferência → redirect)
     ============================================= */
+    function resolveCheckoutApiUrl(cfg) {
+        const fallback = '/api/checkout';
+        const pathRaw =
+            (typeof cfg.checkoutApiPath === 'string' && cfg.checkoutApiPath.trim()) || '';
+        const path = pathRaw ? (pathRaw.startsWith('/') ? pathRaw : `/${pathRaw}`) : '';
+
+        const absRaw =
+            typeof cfg.checkoutApiUrl === 'string' && cfg.checkoutApiUrl.trim()
+                ? cfg.checkoutApiUrl.trim()
+                : '';
+        if (!path && !absRaw) return fallback;
+
+        const hostNoWww = (h) => String(h || '').replace(/^www\./i, '');
+        const pageHost = window.location.hostname;
+
+        if (absRaw) {
+            try {
+                const u = new URL(absRaw);
+                if (u.origin === window.location.origin) {
+                    return u.pathname + u.search;
+                }
+                if (hostNoWww(u.hostname) === hostNoWww(pageHost)) {
+                    /* evita cross-origin www ⇄ apex (preflight OPTIONS no apex devolve 307 sem CORS) */
+                    return u.pathname + u.search || fallback;
+                }
+                return absRaw;
+            } catch (_) {
+                return absRaw;
+            }
+        }
+        return path || fallback;
+    }
+
     async function redirectToMercadoPagoCheckout(button) {
         const nomeBase = button.getAttribute('data-produto');
         const preco = button.getAttribute('data-valor');
@@ -348,10 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const produto = `${nomeBase} — Cor: ${cor}`;
 
         const cfg = window.BMAX_CONFIG || {};
-        const apiUrl =
-            (typeof cfg.checkoutApiUrl === 'string' && cfg.checkoutApiUrl) ||
-            (typeof cfg.checkoutApiPath === 'string' && cfg.checkoutApiPath) ||
-            '/api/checkout';
+        const apiUrl = resolveCheckoutApiUrl(cfg);
         const label = button.textContent;
         button.setAttribute('aria-busy', 'true');
         button.style.pointerEvents = 'none';

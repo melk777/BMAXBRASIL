@@ -25,8 +25,8 @@
         window.BMAX_CONFIG = {
             siteUrl: 'https://bmaxbrasiloficial.com.br',
             sheetsWebhookUrl: 'https://script.google.com/macros/s/AKfycbysxi45jDQyHGvzAmnFm6W-h5dfpF5d9Ieo-zgVmSITYOPEpKyVhecJ3iOCnZmaLS26/exec',
-            checkoutApiPath: '/api/checkout',
-            checkoutApiUrl: 'https://bmaxbrasiloficial.com.br/api/checkout'
+            /* Use apenas o path: a requisição segue o mesmo host da página (evita falha de CORS entre www e non-www). */
+            checkoutApiPath: '/api/checkout'
         };
     </script>
 </head>
