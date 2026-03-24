@@ -1,29 +1,5 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-    <style>
-        .seletor-cor-luxo {
-            width: 100%;
-            padding: 12px;
-            background: #000; /* Fundo preto para combinar com o site */
-            color: #fff;
-            border: 1px solid #0071e3; /* Azul Apple */
-            border-radius: 8px;
-            margin-bottom: 15px;
-            cursor: pointer;
-            font-size: 1rem;
-            appearance: none; /* Remove a seta padrão do navegador */
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-            background-size: 1em;
-        }
-
-        .seletor-cor-luxo:focus {
-            outline: none;
-            border-color: #5ac8fa;
-            box-shadow: 0 0 5px rgba(0, 113, 227, 0.5);
-        }
-    </style>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -38,33 +14,15 @@
     <script type="module" src="https://unpkg.com/@splinetool/viewer/build/spline-viewer.js"></script>
 
     <link rel="stylesheet" href="style.css">
-    
-</head>
-    <script src="https://sdk.mercadopago.com/js/v2"></script>
-<script>
-  const mp = new MercadoPago(APP_USR-9de90a44-43f6-400e-8229-31a7a7c64beb); // Sua Public Key aqui
 
-  document.querySelectorAll('.btn-reserva-venda').forEach(botao => {
-    botao.addEventListener('click', async (e) => {
-      e.preventDefault();
-      
-      const nomeBase = botao.getAttribute('data-produto');
-      const preco = botao.getAttribute('data-valor');
-      const idCor = botao.getAttribute('data-cor-id');
-      const corSelecionada = document.getElementById(idCor).value;
-      
-      // No Transparente, redirecionamos para uma página de checkout interna sua
-      // ou abrimos um formulário de pagamento no próprio site.
-      // Vamos enviar para sua página de checkout passando o produto e valor na URL:
-      const params = new URLSearchParams({
-        item: `${nomeBase} (${corSelecionada})`,
-        preco: preco
-      });
-      
-      window.location.href = `/checkout-pagamento.html?${params.toString()}`;
-    });
-  });
-</script>
+    <!-- Cole a URL do Web App do Google Apps Script após implantar -->
+    <script>
+        window.BMAX_CONFIG = {
+            sheetsWebhookUrl: 'https://script.google.com/macros/s/AKfycbysxi45jDQyHGvzAmnFm6W-h5dfpF5d9Ieo-zgVmSITYOPEpKyVhecJ3iOCnZmaLS26/exec',
+            checkoutApiPath: '/api/checkout'
+        };
+    </script>
+</head>
 <body>
     
     <nav class="navbar" id="navbar">
@@ -84,7 +42,7 @@
             </a>
             <div class="nav-search-container">
                 <i class="ph ph-magnifying-glass"></i>
-                <input type="text" id="navbar-search" placeholder="Buscar..." autocomplete="off">
+                <input type="search" id="navbar-search" placeholder="Ex.: Pro Max, 256GB, Air…" enterkeyhint="search" autocomplete="off" aria-label="Buscar modelos no catálogo">
             </div>
         </div>
 
@@ -140,7 +98,7 @@
             
             <div class="products-grid">
                 
-                <div class="product-card">
+                <div class="product-card" data-search="iphone 17 pro max 256 256gb pro max max">
                     <div class="product-img-wrapper">
                         <img id="img-pro-max-256" src="assets/iphone17/deep-blue.png" alt="iPhone 17 Pro Max 256GB" style="object-fit: contain; padding: 10px;">
                     </div>
@@ -159,7 +117,7 @@
 <a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17 Pro Max 256GB" data-valor="9195.00" data-cor-id="cor-1">RESERVAR UNIDADE</a>
                 </div>
                 
-                <div class="product-card">
+                <div class="product-card" data-search="iphone 17 256 256gb base standard">
                     <div class="product-img-wrapper">
                         <img id="img-base-256" src="assets/iphone17/base/white.png" alt="iPhone 17 256GB" style="object-fit: contain; padding: 10px;">
                     </div>
@@ -180,7 +138,7 @@
 <a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17 256GB" data-valor="5717.00" data-cor-id="cor-2">RESERVAR UNIDADE</a>
                 </div>
 
-                <div class="product-card">
+                <div class="product-card" data-search="iphone 17 pro 256 256gb pro">
                     <div class="product-img-wrapper">
                         <img id="img-pro-256" src="assets/iphone17pro/white.png" alt="iPhone 17 Pro 256GB" style="object-fit: contain; padding: 10px;">
                     </div>
@@ -199,7 +157,7 @@
 <a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17 Pro 256GB" data-valor="8372.00" data-cor-id="cor-3">RESERVAR UNIDADE</a>
                 </div>
 
-                <div class="product-card">
+                <div class="product-card" data-search="iphone 17 pro max 512 512gb pro max max">
                     <div class="product-img-wrapper">
                         <img id="img-pro-max-512" src="assets/iphone17/cosmic-orange.png" alt="iPhone 17 Pro Max 512GB" style="object-fit: contain; padding: 10px;">
                     </div>
@@ -218,7 +176,7 @@
 <a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17 Pro Max 512GB" data-valor="10483.00" data-cor-id="cor-4">RESERVAR UNIDADE</a>
                 </div>
 
-                <div class="product-card">
+                <div class="product-card" data-search="iphone 17 pro 512 512gb">
                     <div class="product-img-wrapper">
                         <img id="img-pro-512" src="assets/iphone17/cosmic-orange.png" alt="iPhone 17 Pro 512GB" style="object-fit: contain; padding: 10px;">
                     </div>
@@ -237,7 +195,7 @@
 <a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17 Pro 512GB" data-valor="9454.00" data-cor-id="cor-5">RESERVAR UNIDADE</a>
                 </div>
 
-                <div class="product-card">
+                <div class="product-card" data-search="iphone 17 pro max 1tb 1024 pro max max">
                     <div class="product-img-wrapper">
                         <img id="img-pro-max-1tb" src="assets/iphone17/cosmic-orange.png" alt="iPhone 17 Pro Max 1TB" style="object-fit: contain; padding: 10px;">
                     </div>
@@ -256,7 +214,7 @@
 <a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17 Pro Max 1TB" data-valor="11181.00" data-cor-id="cor-6">RESERVAR UNIDADE</a>
                 </div>
 
-                <div class="product-card">
+                <div class="product-card" data-search="iphone 17 pro 1tb 1024">
                     <div class="product-img-wrapper">
                         <img id="img-pro-1tb" src="assets/iphone17/deep-blue.png" alt="iPhone 17 Pro 1TB" style="object-fit: contain; padding: 10px;">
                     </div>
@@ -275,7 +233,7 @@
 <a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17 Pro 1TB" data-valor="10514.00" data-cor-id="cor-7">RESERVAR UNIDADE</a>
                 </div>
 
-                <div class="product-card">
+                <div class="product-card" data-search="iphone 17e 17 e 256 256gb">
                     <div class="product-img-wrapper">
                         <img id="img-e-256" src="assets/iphone17e/pink.png" alt="iPhone 17e 256GB" style="object-fit: contain; padding: 10px;">
                     </div>
@@ -294,7 +252,7 @@
 <a href="javascript:void(0)" class="btn primary-btn btn-glow btn-reserva-venda" data-produto="iPhone 17e 256GB" data-valor="3862.00" data-cor-id="cor-8">RESERVAR UNIDADE</a>
                 </div>
 
-                <div class="product-card">
+                <div class="product-card" data-search="iphone air 256 256gb slim">
                     <div class="product-img-wrapper">
                         <img id="img-air-256" src="assets/iphoneair/black.png" alt="iPhone Air 256GB" style="object-fit: contain; padding: 10px;">
                     </div>
@@ -698,55 +656,7 @@
         <p id="toast-message" class="toast-message">Sofia de São Paulo acaba de garantir seu iPhone 17 Pro.</p>
     </div>
 
-    <script>
-  // Iniciamos o teste
-  console.log("Sistema BMAX carregado e monitorando cliques.");
-
-  document.addEventListener('click', function (event) {
-    // 1. O código verifica se você clicou em algo que contém a classe do seu botão
-    if (event.target.innerText === "RESERVAR UNIDADE" || event.target.classList.contains('btn-reserva-venda')) {
-      
-      event.preventDefault();
-      alert("O clique no botão RESERVAR UNIDADE funcionou! Agora vou tentar falar com a Vercel...");
-
-      const botao = event.target;
-      const nomeBase = botao.getAttribute('data-produto');
-      const preco = botao.getAttribute('data-valor');
-      const idCor = botao.getAttribute('data-cor-id');
-      const seletor = document.getElementById(idCor);
-
-      if (!seletor) {
-        alert("Erro: Não encontrei o seletor de cores com o ID: " + idCor);
-        return;
-      }
-
-      // Se chegou aqui, o clique está perfeito. Vamos tentar abrir o Mercado Pago:
-      enviarParaMercadoPago(nomeBase, seletor.value, preco);
-    }
-  });
-
-  async function enviarParaMercadoPago(produto, cor, valor) {
-    try {
-      const response = await fetch('api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          produto: produto + " (" + cor + ")",
-          valor: valor
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.id) {
-        window.location.href = `https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=${data.id}`;
-      } else {
-        alert("A Vercel respondeu, mas o Mercado Pago não gerou o link. Erro: " + (data.error || "Desconhecido"));
-      }
-    } catch (err) {
-      alert("Erro crítico: O site não conseguiu falar com a pasta /api/checkout.js. Verifique se o arquivo existe no GitHub.");
-    }
-  }
-</script>
+    <script src="https://unpkg.com/imask"></script>
+    <script src="script.js" defer></script>
 </body>
 </html>

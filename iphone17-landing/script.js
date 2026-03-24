@@ -74,27 +74,93 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* ==========================================
-       4. FORM SUBMISSION
+       4. FORM SUBMISSION → Google Sheets (Apps Script)
     ============================================= */
     const form = document.getElementById('vip-form');
-    if (form) {
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            const submitBtn = form.querySelector('.submit-btn');
-            const originalText = submitBtn.textContent;
-            submitBtn.textContent = 'Reservando Vaga...';
-            submitBtn.disabled = true;
+    const formMessage = document.getElementById('form-message');
 
-            setTimeout(() => {
+    function showFormMessage(text, isError) {
+        if (!formMessage) return;
+        formMessage.textContent = text;
+        formMessage.classList.remove('hidden');
+        formMessage.classList.toggle('message--error', !!isError);
+        formMessage.classList.toggle('message--ok', !isError);
+    }
+
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('name')?.value.trim() || '';
+            const email = document.getElementById('email')?.value.trim() || '';
+            const whatsapp = document.getElementById('whatsapp')?.value.trim() || '';
+            const submitBtn = form.querySelector('.submit-btn');
+            const originalText = submitBtn ? submitBtn.textContent : '';
+            const webhook = window.BMAX_CONFIG && window.BMAX_CONFIG.sheetsWebhookUrl;
+
+            if (!webhook || String(webhook).includes('SUBSTITUA')) {
+                showFormMessage('Cole a URL do Web App do Google Apps Script em BMAX_CONFIG (index.html), depois implante o script na planilha.', true);
+                return;
+            }
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Enviando...';
+            }
+
+            const payload = JSON.stringify({
+                name,
+                email,
+                whatsapp,
+                source: 'bmax-landing-vip'
+            });
+
+            const postPlain = () =>
+                fetch(webhook, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+                    body: payload
+                });
+
+            try {
+                let res = await postPlain();
+                let data = {};
+                try {
+                    data = await res.json();
+                } catch (_) {
+                    /* resposta vazia ou não-JSON — comum em alguns proxies */
+                }
+
+                if (data.duplicate) {
+                    showFormMessage(data.message || 'Este e-mail já está na lista VIP.', false);
+                    if (submitBtn) {
+                        submitBtn.textContent = originalText;
+                        submitBtn.disabled = false;
+                    }
+                    return;
+                }
+
+                if (!res.ok || data.ok === false) {
+                    throw new Error(data.error || data.message || `Erro ${res.status}`);
+                }
+
                 form.reset();
-                submitBtn.textContent = 'Você está na lista VIP!';
-                
-                setTimeout(() => {
+                showFormMessage('Cadastro recebido. Verifique seu e-mail e WhatsApp em breve.', false);
+                if (submitBtn) {
+                    submitBtn.textContent = 'Você está na lista VIP!';
+                    setTimeout(() => {
+                        submitBtn.textContent = originalText;
+                        submitBtn.disabled = false;
+                    }, 4000);
+                }
+            } catch (err) {
+                console.error(err);
+                showFormMessage('Não foi possível enviar agora. Tente de novo em instantes ou verifique a URL do Apps Script.', true);
+                if (submitBtn) {
                     submitBtn.textContent = originalText;
                     submitBtn.disabled = false;
-                }, 4000);
-            }, 1000);
+                }
+            }
         });
     }
 
@@ -138,15 +204,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.fade-in').forEach(el => fadeObserver.observe(el));
 
-    // Mobile fallback: force all fade-in elements visible after 600ms
-    // Prevents products/sections from staying hidden if IntersectionObserver fails
-    if (window.innerWidth <= 768) {
-        setTimeout(() => {
-            document.querySelectorAll('.fade-in').forEach(el => {
-                el.classList.add('visible');
-            });
-        }, 600);
-    }
+    /* Fallback global: garante Hero além do fold + seções visíveis se o observer falhar */
+    setTimeout(() => {
+        document.querySelectorAll('.fade-in:not(.visible)').forEach(el => el.classList.add('visible'));
+    }, 1800);
 
     /* ==========================================
        9. WIDGET DE PROVA SOCIAL (SCARCITY TOAST)
@@ -165,17 +226,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showToast() {
         if (!toast) return;
-        
+
         const randomText = toastTexts[Math.floor(Math.random() * toastTexts.length)];
         toastMessage.textContent = randomText;
-        
-        toast.classList.add('show');
 
-        // Hide after 6 seconds
+        toast.classList.remove('hide-out');
+        requestAnimationFrame(() => {
+            toast.classList.add('show');
+        });
+
         setTimeout(() => {
             toast.classList.remove('show');
-            scheduleNextToast();
-        }, 6000);
+            toast.classList.add('hide-out');
+            setTimeout(() => {
+                toast.classList.remove('hide-out');
+                scheduleNextToast();
+            }, 520);
+        }, 6200);
     }
 
     function scheduleNextToast() {
@@ -216,31 +283,113 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* ==========================================
-       11. PRODUCT SEARCH FILTER
+       11. PRODUCT SEARCH (navbar)
     ============================================= */
     const searchInput = document.getElementById('navbar-search');
-    const products = document.querySelectorAll('.product-card');
+    const produtosSection = document.getElementById('produtos');
 
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            const term = e.target.value.toLowerCase().trim();
-            
-            products.forEach(card => {
-                const title = card.querySelector('h3').textContent.toLowerCase();
-                if (title.includes(term)) {
-                    card.classList.remove('hidden-search');
-                } else {
-                    card.classList.add('hidden-search');
-                }
-            });
+    function cardSearchBlob(card) {
+        const extra = (card.getAttribute('data-search') || '').toLowerCase();
+        const h3 = card.querySelector('h3');
+        const title = h3 ? h3.textContent.toLowerCase() : '';
+        return `${extra} ${title}`;
+    }
 
-            // Smooth scroll to products if user is searching and not there
-            if (term.length > 2 && window.scrollY < 500) {
-                document.getElementById('produtos').scrollIntoView({ behavior: 'smooth' });
+    function cardMatches(term, blob) {
+        if (!term) return true;
+        const words = term.toLowerCase().split(/\s+/).filter(Boolean);
+        return words.every((w) => blob.includes(w));
+    }
+
+    function applyProductFilter(rawTerm) {
+        const term = rawTerm.trim();
+        const cards = document.querySelectorAll('.product-card');
+        cards.forEach((card) => {
+            const blob = cardSearchBlob(card);
+            if (cardMatches(term, blob)) {
+                card.classList.remove('product-card--filtered-out', 'hidden-search');
+            } else {
+                card.classList.add('product-card--filtered-out');
+                card.classList.remove('hidden-search');
             }
         });
     }
 
+    let searchScrollDone = false;
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value;
+            applyProductFilter(term);
+            if (term.trim().length >= 2 && !searchScrollDone) {
+                searchScrollDone = true;
+                produtosSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            if (!term.trim()) searchScrollDone = false;
+        });
+
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyProductFilter(searchInput.value);
+                produtosSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    }
+
+    /* ==========================================
+       12. CHECKOUT MERCADO PAGO (preferência → redirect)
+    ============================================= */
+    async function redirectToMercadoPagoCheckout(button) {
+        const nomeBase = button.getAttribute('data-produto');
+        const preco = button.getAttribute('data-valor');
+        const idCor = button.getAttribute('data-cor-id');
+        const seletor = idCor ? document.getElementById(idCor) : null;
+        const cor = seletor ? seletor.value.trim() : '';
+        const produto = `${nomeBase} — Cor: ${cor}`;
+
+        const apiPath =
+            (window.BMAX_CONFIG && window.BMAX_CONFIG.checkoutApiPath) || '/api/checkout';
+        const label = button.textContent;
+        button.setAttribute('aria-busy', 'true');
+        button.style.pointerEvents = 'none';
+        button.textContent = 'Abrindo checkout...';
+
+        try {
+            const response = await fetch(apiPath, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    produto,
+                    valor: Number(String(preco).replace(',', '.'))
+                })
+            });
+            const data = await response.json().catch(() => ({}));
+
+            if (data.id) {
+                window.location.href = `https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=${encodeURIComponent(data.id)}`;
+                return;
+            }
+
+            const detail = data.details || data.error || data.message || 'Resposta sem preferência.';
+            alert(detail);
+        } catch (err) {
+            console.error(err);
+            alert(
+                'Não foi possível abrir o checkout. Em produção, publique com a API em /api/checkout e a variável MP_ACCESS_TOKEN (Mercado Pago).'
+            );
+        } finally {
+            button.textContent = label;
+            button.style.pointerEvents = '';
+            button.removeAttribute('aria-busy');
+        }
+    }
+
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-reserva-venda');
+        if (!btn) return;
+        e.preventDefault();
+        redirectToMercadoPagoCheckout(btn);
+    });
 });
 
 // ============================================
