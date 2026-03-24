@@ -347,15 +347,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const cor = seletor ? seletor.value.trim() : '';
         const produto = `${nomeBase} — Cor: ${cor}`;
 
-        const apiPath =
-            (window.BMAX_CONFIG && window.BMAX_CONFIG.checkoutApiPath) || '/api/checkout';
+        const cfg = window.BMAX_CONFIG || {};
+        const apiUrl =
+            (typeof cfg.checkoutApiUrl === 'string' && cfg.checkoutApiUrl) ||
+            (typeof cfg.checkoutApiPath === 'string' && cfg.checkoutApiPath) ||
+            '/api/checkout';
         const label = button.textContent;
         button.setAttribute('aria-busy', 'true');
         button.style.pointerEvents = 'none';
         button.textContent = 'Abrindo checkout...';
 
         try {
-            const response = await fetch(apiPath, {
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -363,19 +366,35 @@ document.addEventListener('DOMContentLoaded', () => {
                     valor: Number(String(preco).replace(',', '.'))
                 })
             });
-            const data = await response.json().catch(() => ({}));
+
+            const rawText = await response.text();
+            let data = {};
+            if (rawText && rawText.trim().startsWith('<')) {
+                alert(
+                    'A rota /api/checkout não está disponível neste endereço (o servidor devolveu HTML em vez da API). Publique o projeto na Vercel/Netlify com a pasta api/ e defina MP_ACCESS_TOKEN, ou defina checkoutApiUrl em BMAX_CONFIG com a URL completa da sua API.'
+                );
+                return;
+            }
+            try {
+                data = rawText ? JSON.parse(rawText) : {};
+            } catch (_) {
+                data = {};
+            }
 
             if (data.id) {
                 window.location.href = `https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=${encodeURIComponent(data.id)}`;
                 return;
             }
 
-            const detail = data.details || data.error || data.message || 'Resposta sem preferência.';
+            const detail = [data.message, data.details, data.error]
+                .filter(Boolean)
+                .join('\n\n') || `Resposta sem preferência (HTTP ${response.status}).`;
+
             alert(detail);
         } catch (err) {
             console.error(err);
             alert(
-                'Não foi possível abrir o checkout. Em produção, publique com a API em /api/checkout e a variável MP_ACCESS_TOKEN (Mercado Pago).'
+                'Não foi possível conectar à API de checkout. Confira rede, CORS e se a função /api/checkout está implantada. No Mercado Pago, use o Access Token (credenciais de produção ou teste), não a Public Key, na variável MP_ACCESS_TOKEN.'
             );
         } finally {
             button.textContent = label;
