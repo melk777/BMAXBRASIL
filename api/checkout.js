@@ -30,9 +30,9 @@ export default async function handler(req, res) {
         // 3. URLs de Retorno: Para onde o cliente vai após pagar
         // Substitua o link abaixo pelo link real do seu site na Vercel
         back_urls: {
-          success: "https://seusite.vercel.app", 
-          failure: "https://seusite.vercel.app",
-          pending: "https://seusite.vercel.app"
+          success: "https://landingpage-eight-eosin.vercel.app", 
+          failure: "https://landingpage-eight-eosin.vercel.app/",
+          pending: "https://landingpage-eight-eosin.vercel.app/"
         },
         auto_return: "approved",
         
