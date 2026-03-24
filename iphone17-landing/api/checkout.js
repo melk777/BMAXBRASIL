@@ -1,11 +1,11 @@
 /**
- * Mesma API que na raiz do repositório — use quando o projeto na Vercel tiver
- * "Root Directory" = iphone17-landing (a pasta api precisa ficar ao lado do site).
- *
- * MP_ACCESS_TOKEN obrigatório. MP_SITE_URL recomendado (URL pública do site).
+ * Mesma API que na raiz — Root Directory = iphone17-landing na Vercel.
+ * MP_ACCESS_TOKEN obrigatório. MP_SITE_URL opcional (fallback: domínio oficial).
  */
 
 import { randomUUID } from 'crypto';
+
+const DEFAULT_PUBLIC_SITE_URL = 'https://bmaxbrasiloficial.com.br';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -44,20 +44,18 @@ export default async function handler(req, res) {
     });
   }
 
+  const forwarded = req.headers['x-forwarded-host'];
+  const forwardedProto = req.headers['x-forwarded-proto'];
+  const fromRequest =
+    typeof forwarded === 'string'
+      ? `${forwardedProto === 'http' ? 'http' : 'https'}://${forwarded}`
+      : '';
+
   const site =
     (process.env.MP_SITE_URL && process.env.MP_SITE_URL.trim()) ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') ||
-    (typeof req.headers['x-forwarded-host'] === 'string'
-      ? `https://${req.headers['x-forwarded-host']}`
-      : '');
-
-  if (!site) {
-    return res.status(503).json({
-      error: 'URL do site não configurada',
-      message: 'Configure MP_SITE_URL (ex.: https://meusite.vercel.app).',
-      details: 'MP_SITE_URL e VERCEL_URL ausentes'
-    });
-  }
+    fromRequest ||
+    DEFAULT_PUBLIC_SITE_URL;
 
   const base = site.replace(/\/$/, '');
   const preferenceBody = {
