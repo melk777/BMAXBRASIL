@@ -6,7 +6,7 @@
 
 import { randomUUID } from 'crypto';
 
-/** Domínio oficial da BMAX (fallback quando MP_SITE_URL / VERCEL_URL não estão definidos) */
+/** Fallback das back_urls do MP quando o host do request não veio nos headers */
 const DEFAULT_PUBLIC_SITE_URL = 'https://bmaxbrasiloficial.com.br';
 
 export default async function handler(req, res) {
@@ -48,16 +48,20 @@ export default async function handler(req, res) {
 
   const forwarded = req.headers['x-forwarded-host'];
   const forwardedProto = req.headers['x-forwarded-proto'];
-  const fromRequest =
-    typeof forwarded === 'string'
-      ? `${forwardedProto === 'http' ? 'http' : 'https'}://${forwarded}`
-      : '';
+  const hostFirst =
+    typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : '';
+  const fromRequest = hostFirst
+    ? `${forwardedProto === 'http' ? 'http' : 'https'}://${hostFirst}`
+    : '';
 
+  /* MP_SITE_URL → host real da requisição (domínio customizado) → domínio oficial.
+     Nunca priorizar VERCEL_URL aqui: na Vercel ele é sempre *.vercel.app e o MP
+     redireciona “voltar à loja” para o deploy em vez do site. */
   const site =
     (process.env.MP_SITE_URL && process.env.MP_SITE_URL.trim()) ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') ||
     fromRequest ||
-    DEFAULT_PUBLIC_SITE_URL;
+    DEFAULT_PUBLIC_SITE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
 
   const base = site.replace(/\/$/, '');
   const preferenceBody = {

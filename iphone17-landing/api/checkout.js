@@ -46,16 +46,18 @@ export default async function handler(req, res) {
 
   const forwarded = req.headers['x-forwarded-host'];
   const forwardedProto = req.headers['x-forwarded-proto'];
-  const fromRequest =
-    typeof forwarded === 'string'
-      ? `${forwardedProto === 'http' ? 'http' : 'https'}://${forwarded}`
-      : '';
+  const hostFirst =
+    typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : '';
+  const fromRequest = hostFirst
+    ? `${forwardedProto === 'http' ? 'http' : 'https'}://${hostFirst}`
+    : '';
 
+  /* Não priorizar VERCEL_URL: senão “voltar à loja” aponta para *.vercel.app */
   const site =
     (process.env.MP_SITE_URL && process.env.MP_SITE_URL.trim()) ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') ||
     fromRequest ||
-    DEFAULT_PUBLIC_SITE_URL;
+    DEFAULT_PUBLIC_SITE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
 
   const base = site.replace(/\/$/, '');
   const preferenceBody = {
