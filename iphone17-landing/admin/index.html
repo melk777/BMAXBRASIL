@@ -21,7 +21,7 @@
           <i class="ph ph-storefront text-2xl"></i>
         </div>
         <h1 class="text-2xl font-semibold">BMAX Admin</h1>
-        <p class="mt-1 text-sm text-slate-500">Entre para gerenciar produtos, fotos, categorias e conteúdo do site.</p>
+        <p class="mt-1 text-sm text-slate-500">Entre para gerenciar produtos, fotos, categorias, clientes e conteúdo do site.</p>
       </div>
 
       <form id="login-form" class="space-y-4">
@@ -55,6 +55,7 @@
       </div>
       <nav class="space-y-1 p-3">
         <button class="nav-item active" data-route="dashboard"><i class="ph ph-squares-four"></i>Dashboard</button>
+        <button class="nav-item" data-route="customers"><i class="ph ph-users-three"></i>Clientes</button>
         <button class="nav-item" data-route="products"><i class="ph ph-device-mobile"></i>Produtos</button>
         <button class="nav-item" data-route="categories"><i class="ph ph-folders"></i>Categorias</button>
         <button class="nav-item" data-route="media"><i class="ph ph-images"></i>Mídia</button>
@@ -79,15 +80,34 @@
 
       <div class="p-4 sm:p-6">
         <section id="dashboard-section" class="view-section space-y-6">
-          <div class="grid gap-4 md:grid-cols-4">
+          <div class="grid gap-4 md:grid-cols-5">
             <article class="metric-card"><span>Produtos</span><strong id="stat-products">0</strong></article>
             <article class="metric-card"><span>Ativos</span><strong id="stat-active-products">0</strong></article>
             <article class="metric-card"><span>Estoque</span><strong id="stat-stock">0</strong></article>
             <article class="metric-card"><span>Pedidos</span><strong id="stat-orders">0</strong></article>
+            <article class="metric-card"><span>Clientes</span><strong id="stat-customers">0</strong></article>
           </div>
           <div class="rounded-lg bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <h3 class="mb-4 font-semibold">Produtos recentes</h3>
             <div id="recent-products" class="divide-y divide-slate-100"></div>
+          </div>
+        </section>
+
+        <section id="customers-section" class="view-section hidden space-y-4">
+          <div class="toolbar">
+            <div class="search-box"><i class="ph ph-magnifying-glass"></i><input id="customer-search" type="search" placeholder="Buscar por nome, CPF, e-mail, telefone ou produto"></div>
+            <span id="customers-count" class="text-sm font-semibold text-slate-500">0 cadastros</span>
+          </div>
+          <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
+            <div class="table-wrap">
+              <table class="admin-table">
+                <thead>
+                  <tr><th>Cliente</th><th>CPF / Telefone</th><th>Produto</th><th>Cidade</th><th>Status</th><th>Data</th><th></th></tr>
+                </thead>
+                <tbody id="customers-table"></tbody>
+              </table>
+            </div>
+            <aside id="customer-details" class="panel-card min-h-80"></aside>
           </div>
         </section>
 
@@ -227,6 +247,7 @@
   <script src="js/api.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/dashboard.js"></script>
+  <script src="js/customers.js"></script>
   <script src="js/categories.js"></script>
   <script src="js/products.js"></script>
   <script src="js/settings.js"></script>
