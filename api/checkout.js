@@ -303,9 +303,17 @@ export default async function handler(req, res) {
       externalReference
     });
 
+    if (!customerRegistration.ok) {
+      return res.status(502).json({
+        error: 'Cadastro não salvo no painel',
+        message: 'Não foi possível registrar os dados do cliente no painel administrativo. Confira se a migração 004_customers.sql foi executada no Supabase.',
+        details: customerRegistration.details || customerRegistration.reason || 'Falha ao gravar cliente no Supabase.'
+      });
+    }
+
     return res.status(200).json({
       id: data.id,
-      customer_registered: Boolean(customerRegistration.ok),
+      customer_registered: true,
       customer_id: customerRegistration.customerId || null
     });
   } catch (err) {
