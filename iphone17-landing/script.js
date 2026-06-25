@@ -337,7 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* ==========================================
-       12. CHECKOUT MERCADO PAGO (preferência → redirect)
+       12. CHECKOUT MERCADO PAGO (cadastro → preferência → redirect)
     ============================================= */
     function resolveCheckoutApiUrl(cfg) {
         const fallback = '/api/checkout';
@@ -372,14 +372,246 @@ document.addEventListener('DOMContentLoaded', () => {
         return path || fallback;
     }
 
-    async function redirectToMercadoPagoCheckout(button) {
+    function onlyDigits(value) {
+        return String(value || '').replace(/\D/g, '');
+    }
+
+    function formatCpf(value) {
+        const digits = onlyDigits(value).slice(0, 11);
+        return digits
+            .replace(/(\d{3})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    }
+
+    function formatCep(value) {
+        return onlyDigits(value).slice(0, 8).replace(/(\d{5})(\d)/, '$1-$2');
+    }
+
+    function formatPhone(value) {
+        const digits = onlyDigits(value).slice(0, 11);
+        if (digits.length <= 10) {
+            return digits
+                .replace(/(\d{2})(\d)/, '($1) $2')
+                .replace(/(\d{4})(\d)/, '$1-$2');
+        }
+        return digits
+            .replace(/(\d{2})(\d)/, '($1) $2')
+            .replace(/(\d{5})(\d)/, '$1-$2');
+    }
+
+    function ensureCheckoutRegistrationModal() {
+        let modal = document.getElementById('checkout-registration-modal');
+        if (modal) return modal;
+
+        const style = document.createElement('style');
+        style.textContent = `
+            .checkout-registration-modal { position: fixed; inset: 0; z-index: 3000; display: none; align-items: center; justify-content: center; padding: 1rem; background: rgba(0, 0, 0, 0.76); backdrop-filter: blur(14px); }
+            .checkout-registration-modal.is-open { display: flex; }
+            .checkout-registration-panel { width: min(760px, 100%); max-height: min(92vh, 860px); overflow-y: auto; border: 1px solid rgba(255,255,255,0.12); border-radius: 22px; background: #0b0b0d; color: #f5f5f7; box-shadow: 0 30px 90px rgba(0,0,0,0.55); }
+            .checkout-registration-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.35rem 1.35rem 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.08); }
+            .checkout-registration-header h2 { margin: 0; font-size: clamp(1.25rem, 4vw, 1.75rem); letter-spacing: 0; }
+            .checkout-registration-header p { margin: 0.35rem 0 0; color: #a1a1a6; font-size: 0.95rem; line-height: 1.45; }
+            .checkout-registration-close { width: 2.5rem; height: 2.5rem; border-radius: 999px; border: 1px solid rgba(255,255,255,0.16); background: transparent; color: #fff; cursor: pointer; font-size: 1.45rem; line-height: 1; }
+            .checkout-registration-form { padding: 1.35rem; }
+            .checkout-registration-summary { display: grid; gap: 0.15rem; margin-bottom: 1rem; padding: 0.85rem 1rem; border-radius: 14px; background: rgba(198,168,124,0.09); border: 1px solid rgba(198,168,124,0.22); color: #e8d7bd; font-size: 0.92rem; }
+            .checkout-registration-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem; }
+            .checkout-registration-field { display: grid; gap: 0.35rem; }
+            .checkout-registration-field--full { grid-column: 1 / -1; }
+            .checkout-registration-field label { color: #d7d7dc; font-size: 0.78rem; font-weight: 700; letter-spacing: 0; }
+            .checkout-registration-field input { width: 100%; min-height: 3rem; border: 1px solid rgba(255,255,255,0.16); border-radius: 12px; background: #050506; color: #fff; padding: 0.85rem 0.95rem; font-size: 0.98rem; outline: none; }
+            .checkout-registration-field input:focus { border-color: #c6a87c; box-shadow: 0 0 0 3px rgba(198,168,124,0.18); }
+            .checkout-registration-message { min-height: 1.25rem; margin-top: 0.85rem; color: #fca5a5; font-size: 0.9rem; }
+            .checkout-registration-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem; }
+            .checkout-registration-secondary, .checkout-registration-primary { min-height: 3rem; border-radius: 999px; padding: 0.8rem 1.2rem; font-weight: 800; cursor: pointer; }
+            .checkout-registration-secondary { border: 1px solid rgba(255,255,255,0.16); background: transparent; color: #fff; }
+            .checkout-registration-primary { border: 0; background: #f5f5f7; color: #000; }
+            @media (max-width: 680px) { .checkout-registration-grid { grid-template-columns: 1fr; } .checkout-registration-panel { border-radius: 16px; } .checkout-registration-actions button { width: 100%; } }
+        `;
+        document.head.appendChild(style);
+
+        modal = document.createElement('div');
+        modal.id = 'checkout-registration-modal';
+        modal.className = 'checkout-registration-modal';
+        modal.innerHTML = `
+            <div class="checkout-registration-panel" role="dialog" aria-modal="true" aria-labelledby="checkout-registration-title">
+                <div class="checkout-registration-header">
+                    <div>
+                        <h2 id="checkout-registration-title">Cadastro para compra</h2>
+                        <p>Preencha seus dados para emissão, entrega e liberação do pagamento seguro.</p>
+                    </div>
+                    <button type="button" class="checkout-registration-close" data-close-checkout-registration aria-label="Fechar">×</button>
+                </div>
+                <form id="checkout-registration-form" class="checkout-registration-form" novalidate>
+                    <div class="checkout-registration-summary">
+                        <strong id="checkout-registration-product">Produto selecionado</strong>
+                        <span id="checkout-registration-price">Valor da reserva</span>
+                    </div>
+                    <div class="checkout-registration-grid">
+                        <div class="checkout-registration-field checkout-registration-field--full">
+                            <label for="checkout-full-name">Nome completo</label>
+                            <input id="checkout-full-name" name="nomeCompleto" autocomplete="name" required>
+                        </div>
+                        <div class="checkout-registration-field">
+                            <label for="checkout-cpf">CPF</label>
+                            <input id="checkout-cpf" name="cpf" inputmode="numeric" autocomplete="off" required>
+                        </div>
+                        <div class="checkout-registration-field">
+                            <label for="checkout-email">E-mail</label>
+                            <input id="checkout-email" name="email" type="email" autocomplete="email" required>
+                        </div>
+                        <div class="checkout-registration-field">
+                            <label for="checkout-phone">Telefone</label>
+                            <input id="checkout-phone" name="telefone" inputmode="tel" autocomplete="tel" required>
+                        </div>
+                        <div class="checkout-registration-field">
+                            <label for="checkout-cep">CEP</label>
+                            <input id="checkout-cep" name="cep" inputmode="numeric" autocomplete="postal-code" required>
+                        </div>
+                        <div class="checkout-registration-field checkout-registration-field--full">
+                            <label for="checkout-address">Endereço</label>
+                            <input id="checkout-address" name="endereco" autocomplete="street-address" placeholder="Rua, avenida, condomínio" required>
+                        </div>
+                        <div class="checkout-registration-field">
+                            <label for="checkout-number">Número</label>
+                            <input id="checkout-number" name="numero" autocomplete="address-line2" required>
+                        </div>
+                        <div class="checkout-registration-field">
+                            <label for="checkout-complement">Complemento</label>
+                            <input id="checkout-complement" name="complemento" autocomplete="address-line3" placeholder="Apto, bloco, casa">
+                        </div>
+                        <div class="checkout-registration-field">
+                            <label for="checkout-neighborhood">Bairro</label>
+                            <input id="checkout-neighborhood" name="bairro" required>
+                        </div>
+                        <div class="checkout-registration-field">
+                            <label for="checkout-city">Cidade</label>
+                            <input id="checkout-city" name="cidade" autocomplete="address-level2" required>
+                        </div>
+                        <div class="checkout-registration-field">
+                            <label for="checkout-state">Estado</label>
+                            <input id="checkout-state" name="estado" maxlength="2" autocomplete="address-level1" placeholder="SP" required>
+                        </div>
+                        <div class="checkout-registration-field checkout-registration-field--full">
+                            <label for="checkout-reference">Ponto de referência</label>
+                            <input id="checkout-reference" name="pontoReferencia" placeholder="Ex.: portaria azul, perto do mercado, casa de esquina" required>
+                        </div>
+                    </div>
+                    <p id="checkout-registration-message" class="checkout-registration-message" aria-live="polite"></p>
+                    <div class="checkout-registration-actions">
+                        <button type="button" class="checkout-registration-secondary" data-close-checkout-registration>Cancelar</button>
+                        <button type="submit" class="checkout-registration-primary">Continuar para pagamento</button>
+                    </div>
+                </form>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const cpfInput = modal.querySelector('#checkout-cpf');
+        const phoneCheckoutInput = modal.querySelector('#checkout-phone');
+        const cepInput = modal.querySelector('#checkout-cep');
+        const stateInput = modal.querySelector('#checkout-state');
+
+        cpfInput.addEventListener('input', () => { cpfInput.value = formatCpf(cpfInput.value); });
+        phoneCheckoutInput.addEventListener('input', () => { phoneCheckoutInput.value = formatPhone(phoneCheckoutInput.value); });
+        cepInput.addEventListener('input', () => { cepInput.value = formatCep(cepInput.value); });
+        stateInput.addEventListener('input', () => { stateInput.value = stateInput.value.replace(/[^a-z]/gi, '').toUpperCase().slice(0, 2); });
+
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal || event.target.closest('[data-close-checkout-registration]')) {
+                modal.classList.remove('is-open');
+                modal.dataset.checkoutButtonId = '';
+            }
+        });
+
+        modal.querySelector('#checkout-registration-form').addEventListener('submit', (event) => {
+            event.preventDefault();
+            const buttonId = modal.dataset.checkoutButtonId;
+            const button = buttonId ? document.querySelector(`[data-checkout-button-id="${buttonId}"]`) : null;
+            if (!button) return;
+
+            const customer = collectCheckoutCustomer(modal);
+            const error = validateCheckoutCustomer(customer);
+            const message = modal.querySelector('#checkout-registration-message');
+            if (error) {
+                message.textContent = error;
+                return;
+            }
+
+            message.textContent = '';
+            modal.classList.remove('is-open');
+            redirectToMercadoPagoCheckout(button, customer);
+        });
+
+        return modal;
+    }
+
+    function collectCheckoutCustomer(modal) {
+        return {
+            nomeCompleto: modal.querySelector('#checkout-full-name')?.value.trim() || '',
+            cpf: onlyDigits(modal.querySelector('#checkout-cpf')?.value),
+            email: modal.querySelector('#checkout-email')?.value.trim() || '',
+            telefone: onlyDigits(modal.querySelector('#checkout-phone')?.value),
+            cep: onlyDigits(modal.querySelector('#checkout-cep')?.value),
+            endereco: modal.querySelector('#checkout-address')?.value.trim() || '',
+            numero: modal.querySelector('#checkout-number')?.value.trim() || '',
+            complemento: modal.querySelector('#checkout-complement')?.value.trim() || '',
+            bairro: modal.querySelector('#checkout-neighborhood')?.value.trim() || '',
+            cidade: modal.querySelector('#checkout-city')?.value.trim() || '',
+            estado: modal.querySelector('#checkout-state')?.value.trim().toUpperCase() || '',
+            pontoReferencia: modal.querySelector('#checkout-reference')?.value.trim() || ''
+        };
+    }
+
+    function validateCheckoutCustomer(customer) {
+        if (customer.nomeCompleto.split(' ').filter(Boolean).length < 2) return 'Informe o nome completo.';
+        if (!/^\d{11}$/.test(customer.cpf)) return 'Informe um CPF com 11 dígitos.';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) return 'Informe um e-mail válido.';
+        if (!/^\d{10,11}$/.test(customer.telefone)) return 'Informe um telefone com DDD.';
+        if (!/^\d{8}$/.test(customer.cep)) return 'Informe um CEP com 8 dígitos.';
+        if (!customer.endereco) return 'Informe o endereço completo.';
+        if (!customer.numero) return 'Informe o número do endereço.';
+        if (!customer.bairro) return 'Informe o bairro.';
+        if (!customer.cidade) return 'Informe a cidade.';
+        if (!/^[A-Z]{2}$/.test(customer.estado)) return 'Informe a sigla do estado com 2 letras.';
+        if (!customer.pontoReferencia) return 'Informe um ponto de referência para entrega.';
+        return '';
+    }
+
+    function selectedCheckoutProduct(button) {
         const nomeBase = button.getAttribute('data-produto');
         const preco = button.getAttribute('data-valor');
         const idCor = button.getAttribute('data-cor-id');
         const seletor = idCor ? document.getElementById(idCor) : null;
         const cor = seletor ? seletor.value.trim() : '';
-        const produto = `${nomeBase} — Cor: ${cor}`;
+        return {
+            produto: `${nomeBase} — Cor: ${cor}`,
+            preco
+        };
+    }
 
+    function openCheckoutRegistration(button) {
+        if (!button.dataset.checkoutButtonId) {
+            button.dataset.checkoutButtonId = `checkout-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        }
+
+        const modal = ensureCheckoutRegistrationModal();
+        const { produto, preco } = selectedCheckoutProduct(button);
+        const value = Number(String(preco).replace(',', '.'));
+        const formattedValue = Number.isFinite(value)
+            ? value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+            : 'Valor da reserva';
+
+        modal.dataset.checkoutButtonId = button.dataset.checkoutButtonId;
+        modal.querySelector('#checkout-registration-product').textContent = produto;
+        modal.querySelector('#checkout-registration-price').textContent = formattedValue;
+        modal.querySelector('#checkout-registration-message').textContent = '';
+        modal.classList.add('is-open');
+        setTimeout(() => modal.querySelector('#checkout-full-name')?.focus(), 30);
+    }
+
+    async function redirectToMercadoPagoCheckout(button, cliente) {
+        const { produto, preco } = selectedCheckoutProduct(button);
         const cfg = window.BMAX_CONFIG || {};
         const apiUrl = resolveCheckoutApiUrl(cfg);
         const label = button.textContent;
@@ -393,7 +625,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     produto,
-                    valor: Number(String(preco).replace(',', '.'))
+                    valor: Number(String(preco).replace(',', '.')),
+                    cliente
                 })
             });
 
@@ -437,7 +670,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = e.target.closest('.btn-reserva-venda');
         if (!btn) return;
         e.preventDefault();
-        redirectToMercadoPagoCheckout(btn);
+        openCheckoutRegistration(btn);
     });
 });
 
