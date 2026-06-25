@@ -106,6 +106,25 @@
     await audit('delete', 'categories', id, {});
   }
 
+  async function listCustomers() {
+    const sb = await requireClient();
+    const { data, error } = await sb
+      .from('customers')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(500);
+    if (error) throw error;
+    return data || [];
+  }
+
+  async function updateCustomer(id, payload) {
+    const sb = await requireClient();
+    const { data, error } = await sb.from('customers').update(payload).eq('id', id).select().single();
+    if (error) throw error;
+    await audit('update', 'customers', id, payload);
+    return data;
+  }
+
   async function uploadProductImages(productId, files) {
     const sb = await requireClient();
     const rows = [];
@@ -174,11 +193,19 @@
     await audit('update', 'site_settings', null, settings);
   }
 
+  async function safeCount(table) {
+    const sb = await requireClient();
+    const { count, error } = await sb.from(table).select('id', { count: 'exact', head: true });
+    if (error) return 0;
+    return count || 0;
+  }
+
   async function getStats() {
     const sb = await requireClient();
-    const [products, orders] = await Promise.all([
-      sb.from('products').select('id,status,stock,name,created_at').order('created_at', { ascending: false }),
-      sb.from('orders').select('id,status')
+    const [products, orders, customers] = await Promise.all([
+      sb.from('products').select('id,status,stock,name,created_at,promotional_price,price').order('created_at', { ascending: false }),
+      sb.from('orders').select('id,status'),
+      safeCount('customers')
     ]);
     if (products.error) throw products.error;
     if (orders.error) throw orders.error;
@@ -188,6 +215,7 @@
       activeProducts: rows.filter((p) => p.status === 'active').length,
       stock: rows.reduce((sum, p) => sum + Number(p.stock || 0), 0),
       orders: (orders.data || []).length,
+      customers,
       recentProducts: rows.slice(0, 6)
     };
   }
@@ -220,6 +248,8 @@
     listCategories,
     saveCategory,
     deleteCategory,
+    listCustomers,
+    updateCustomer,
     uploadProductImages,
     updateProductImage,
     deleteProductImage,
