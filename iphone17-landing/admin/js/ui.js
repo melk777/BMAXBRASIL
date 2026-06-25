@@ -1,6 +1,7 @@
 (function () {
   const titles = {
     dashboard: ['Dashboard', 'Visao geral da operacao'],
+    customers: ['Clientes', 'Cadastros realizados antes da compra'],
     products: ['Produtos', 'Cadastro, precos, estoque e imagens'],
     categories: ['Categorias', 'Organizacao do catalogo'],
     media: ['Midia', 'Fotos e arquivos usados no site'],
