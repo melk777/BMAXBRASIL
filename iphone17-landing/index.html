@@ -26,7 +26,9 @@
             siteUrl: 'https://bmaxbrasiloficial.com.br',
             sheetsWebhookUrl: 'https://script.google.com/macros/s/AKfycbysxi45jDQyHGvzAmnFm6W-h5dfpF5d9Ieo-zgVmSITYOPEpKyVhecJ3iOCnZmaLS26/exec',
             /* Use apenas o path: a requisição segue o mesmo host da página (evita falha de CORS entre www e non-www). */
-            checkoutApiPath: '/api/checkout'
+            checkoutApiPath: '/api/checkout',
+            supabaseUrl: 'https://oqveyejntxkltpfdydof.supabase.co',
+            supabaseAnonKey: 'sb_publishable_QoEIfW1EYIu5Tqc7e6EHnw_TSnOfcF9'
         };
     </script>
 </head>
@@ -646,7 +648,10 @@
         <p id="toast-message" class="toast-message">Sofia de São Paulo acaba de garantir seu iPhone 17 Pro.</p>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/imask"></script>
+    <script src="js/public-api.js" defer></script>
+    <script src="js/render-products.js" defer></script>
     <script src="script.js" defer></script>
 </body>
 </html>

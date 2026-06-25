@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BMAX Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="bg-slate-100 text-slate-900">
+  <div id="setup-warning" class="hidden border-b border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+    Configure `admin/js/config.js` com `supabaseUrl` e `supabaseAnonKey` para ativar login, banco e uploads.
+  </div>
+
+  <main id="login-view" class="min-h-screen grid place-items-center px-4">
+    <section class="w-full max-w-md rounded-lg bg-white p-6 shadow-sm ring-1 ring-slate-200">
+      <div class="mb-8">
+        <div class="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-lg bg-slate-950 text-white">
+          <i class="ph ph-storefront text-2xl"></i>
+        </div>
+        <h1 class="text-2xl font-semibold">BMAX Admin</h1>
+        <p class="mt-1 text-sm text-slate-500">Entre para gerenciar produtos, fotos, categorias e conteúdo do site.</p>
+      </div>
+
+      <form id="login-form" class="space-y-4">
+        <label class="block">
+          <span class="form-label">E-mail</span>
+          <input id="login-email" type="email" required class="form-input" autocomplete="email">
+        </label>
+        <label class="block">
+          <span class="form-label">Senha</span>
+          <input id="login-password" type="password" required class="form-input" autocomplete="current-password">
+        </label>
+        <button class="btn-primary w-full" type="submit">
+          <i class="ph ph-sign-in"></i>
+          Entrar
+        </button>
+        <p id="login-message" class="min-h-5 text-sm"></p>
+      </form>
+    </section>
+  </main>
+
+  <div id="admin-view" class="hidden min-h-screen">
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 -translate-x-full border-r border-slate-200 bg-white transition lg:translate-x-0">
+      <div class="flex h-16 items-center gap-3 border-b border-slate-200 px-5">
+        <div class="grid h-10 w-10 place-items-center rounded-lg bg-slate-950 text-white">
+          <i class="ph ph-storefront text-xl"></i>
+        </div>
+        <div>
+          <p class="font-semibold leading-tight">BMAX Brasil</p>
+          <p class="text-xs text-slate-500">Painel administrativo</p>
+        </div>
+      </div>
+      <nav class="space-y-1 p-3">
+        <button class="nav-item active" data-route="dashboard"><i class="ph ph-squares-four"></i>Dashboard</button>
+        <button class="nav-item" data-route="products"><i class="ph ph-device-mobile"></i>Produtos</button>
+        <button class="nav-item" data-route="categories"><i class="ph ph-folders"></i>Categorias</button>
+        <button class="nav-item" data-route="media"><i class="ph ph-images"></i>Mídia</button>
+        <button class="nav-item" data-route="settings"><i class="ph ph-gear-six"></i>Configurações</button>
+      </nav>
+    </aside>
+
+    <div class="lg:pl-72">
+      <header class="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white/90 px-4 backdrop-blur">
+        <div class="flex items-center gap-3">
+          <button id="menu-toggle" class="icon-btn lg:hidden" aria-label="Abrir menu"><i class="ph ph-list"></i></button>
+          <div>
+            <h2 id="page-title" class="text-lg font-semibold">Dashboard</h2>
+            <p id="page-subtitle" class="hidden text-xs text-slate-500 sm:block">Visão geral da operação</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <a href="../index.html" class="btn-secondary" target="_blank" rel="noreferrer"><i class="ph ph-arrow-square-out"></i>Ver site</a>
+          <button id="logout-button" class="icon-btn" aria-label="Sair"><i class="ph ph-sign-out"></i></button>
+        </div>
+      </header>
+
+      <div class="p-4 sm:p-6">
+        <section id="dashboard-section" class="view-section space-y-6">
+          <div class="grid gap-4 md:grid-cols-4">
+            <article class="metric-card"><span>Produtos</span><strong id="stat-products">0</strong></article>
+            <article class="metric-card"><span>Ativos</span><strong id="stat-active-products">0</strong></article>
+            <article class="metric-card"><span>Estoque</span><strong id="stat-stock">0</strong></article>
+            <article class="metric-card"><span>Pedidos</span><strong id="stat-orders">0</strong></article>
+          </div>
+          <div class="rounded-lg bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <h3 class="mb-4 font-semibold">Produtos recentes</h3>
+            <div id="recent-products" class="divide-y divide-slate-100"></div>
+          </div>
+        </section>
+
+        <section id="products-section" class="view-section hidden space-y-4">
+          <div class="toolbar">
+            <div class="flex flex-1 items-center gap-2">
+              <div class="search-box"><i class="ph ph-magnifying-glass"></i><input id="product-search" type="search" placeholder="Buscar produtos"></div>
+              <select id="product-status-filter" class="form-select max-w-40">
+                <option value="">Todos</option>
+                <option value="active">Ativos</option>
+                <option value="inactive">Inativos</option>
+              </select>
+            </div>
+            <button id="new-product-button" class="btn-primary"><i class="ph ph-plus"></i>Novo produto</button>
+          </div>
+          <div class="table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr><th>Produto</th><th>Preço</th><th>Promocional</th><th>Estoque</th><th>Status</th><th></th></tr>
+              </thead>
+              <tbody id="products-table"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="categories-section" class="view-section hidden space-y-4">
+          <div class="toolbar">
+            <p class="text-sm text-slate-500">Organize o catálogo e vincule produtos por categoria.</p>
+            <button id="new-category-button" class="btn-primary"><i class="ph ph-plus"></i>Nova categoria</button>
+          </div>
+          <div class="grid gap-4 lg:grid-cols-[1fr_360px]">
+            <div class="table-wrap">
+              <table class="admin-table">
+                <thead><tr><th>Categoria</th><th>Slug</th><th>Status</th><th></th></tr></thead>
+                <tbody id="categories-table"></tbody>
+              </table>
+            </div>
+            <form id="category-form" class="panel-card space-y-4">
+              <input type="hidden" id="category-id">
+              <h3 class="font-semibold">Editar categoria</h3>
+              <label class="block"><span class="form-label">Nome</span><input id="category-name" class="form-input" required></label>
+              <label class="block"><span class="form-label">Slug</span><input id="category-slug" class="form-input" required></label>
+              <label class="block"><span class="form-label">Descrição</span><textarea id="category-description" class="form-input min-h-24"></textarea></label>
+              <label class="block"><span class="form-label">Status</span><select id="category-status" class="form-select"><option value="active">Ativa</option><option value="inactive">Inativa</option></select></label>
+              <button class="btn-primary w-full" type="submit"><i class="ph ph-floppy-disk"></i>Salvar categoria</button>
+            </form>
+          </div>
+        </section>
+
+        <section id="media-section" class="view-section hidden space-y-4">
+          <div class="panel-card">
+            <h3 class="font-semibold">Biblioteca de mídia</h3>
+            <p class="mt-1 text-sm text-slate-500">As fotos de produtos são gerenciadas no cadastro de cada produto. Logos e banners ficam em Configurações.</p>
+          </div>
+          <div id="media-grid" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"></div>
+        </section>
+
+        <section id="settings-section" class="view-section hidden space-y-4">
+          <form id="settings-form" class="grid gap-4 xl:grid-cols-2">
+            <div class="panel-card space-y-4">
+              <h3 class="font-semibold">Marca e Home</h3>
+              <label class="block"><span class="form-label">Nome da marca</span><input id="setting-brand-name" class="form-input"></label>
+              <label class="block"><span class="form-label">Nome no rodapé</span><input id="setting-footer-name" class="form-input"></label>
+              <label class="block"><span class="form-label">Logo URL</span><input id="setting-logo-url" class="form-input"></label>
+              <label class="block"><span class="form-label">Título do catálogo</span><input id="setting-catalog-title" class="form-input"></label>
+              <label class="block"><span class="form-label">Estoque destacado</span><input id="setting-stock-count" type="number" min="0" class="form-input"></label>
+            </div>
+            <div class="panel-card space-y-4">
+              <h3 class="font-semibold">Contato e redes</h3>
+              <label class="block"><span class="form-label">WhatsApp</span><input id="setting-whatsapp" class="form-input"></label>
+              <label class="block"><span class="form-label">E-mail</span><input id="setting-email" type="email" class="form-input"></label>
+              <label class="block"><span class="form-label">Instagram</span><input id="setting-instagram" class="form-input"></label>
+              <label class="block"><span class="form-label">Facebook</span><input id="setting-facebook" class="form-input"></label>
+              <button class="btn-primary w-full" type="submit"><i class="ph ph-floppy-disk"></i>Salvar configurações</button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="product-modal" class="modal hidden">
+    <div class="modal-panel max-w-5xl">
+      <div class="flex items-start justify-between gap-4 border-b border-slate-200 p-5">
+        <div>
+          <h3 id="product-modal-title" class="text-lg font-semibold">Produto</h3>
+          <p class="text-sm text-slate-500">Cadastre dados, preço, estoque, tags e fotos.</p>
+        </div>
+        <button class="icon-btn" data-close-modal><i class="ph ph-x"></i></button>
+      </div>
+      <form id="product-form" class="grid max-h-[80vh] gap-5 overflow-y-auto p-5 lg:grid-cols-[1fr_320px]">
+        <input type="hidden" id="product-id">
+        <div class="space-y-4">
+          <label class="block"><span class="form-label">Nome</span><input id="product-name" class="form-input" required></label>
+          <label class="block"><span class="form-label">Slug</span><input id="product-slug" class="form-input" required></label>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="block"><span class="form-label">Preço parcelado</span><input id="product-price" type="number" step="0.01" min="0" class="form-input" required></label>
+            <label class="block"><span class="form-label">Preço promocional/PIX</span><input id="product-promotional-price" type="number" step="0.01" min="0" class="form-input"></label>
+          </div>
+          <div class="grid gap-4 sm:grid-cols-3">
+            <label class="block"><span class="form-label">Estoque</span><input id="product-stock" type="number" min="0" class="form-input" required></label>
+            <label class="block"><span class="form-label">Categoria</span><select id="product-category" class="form-select"></select></label>
+            <label class="block"><span class="form-label">Status</span><select id="product-status" class="form-select"><option value="active">Ativo</option><option value="inactive">Inativo</option></select></label>
+          </div>
+          <label class="block"><span class="form-label">Descrição curta</span><input id="product-short-description" class="form-input"></label>
+          <label class="block"><span class="form-label">Descrição completa</span><textarea id="product-description" class="form-input min-h-32"></textarea></label>
+          <label class="block"><span class="form-label">Tags separadas por vírgula</span><input id="product-tags" class="form-input" placeholder="iphone, pro max, 256gb"></label>
+          <label class="block"><span class="form-label">Cores/variações em JSON</span><textarea id="product-colors-json" class="form-input min-h-40 font-mono text-xs"></textarea></label>
+        </div>
+        <aside class="space-y-4">
+          <div class="panel-card space-y-3">
+            <h4 class="font-semibold">Fotos do produto</h4>
+            <input id="product-image-upload" type="file" multiple accept="image/*" class="form-input">
+            <div id="product-images-list" class="space-y-2"></div>
+          </div>
+          <button class="btn-primary w-full" type="submit"><i class="ph ph-floppy-disk"></i>Salvar produto</button>
+        </aside>
+      </form>
+    </div>
+  </div>
+
+  <div id="confirm-modal" class="modal hidden">
+    <div class="modal-panel max-w-md p-5">
+      <h3 class="text-lg font-semibold">Confirmar exclusão</h3>
+      <p id="confirm-message" class="mt-2 text-sm text-slate-500">Esta ação não pode ser desfeita.</p>
+      <div class="mt-5 flex justify-end gap-2">
+        <button id="confirm-cancel" class="btn-secondary">Cancelar</button>
+        <button id="confirm-ok" class="btn-danger">Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/categories.js"></script>
+  <script src="js/products.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/media.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
