@@ -6,7 +6,8 @@ Execute os arquivos SQL no Supabase SQL Editor nesta ordem:
 2. `migrations/002_storage_policies.sql`
 3. `migrations/003_realtime_publication.sql`
 4. `migrations/004_customers.sql`
-5. `seed.sql`
+5. `migrations/005_orders_payment_flow.sql`
+6. `seed.sql`
 
 A migracao `004_customers.sql` cria a tabela `customers`, usada para salvar os dados preenchidos antes do checkout:
 
@@ -23,4 +24,6 @@ A migracao `004_customers.sql` cria a tabela `customers`, usada para salvar os d
 
 Depois de executar a migracao, acesse `iphone17-landing/admin/index.html` e entre no painel. A nova aba **Clientes** mostra cada cadastro recebido pelo checkout.
 
-No servidor, configure `SUPABASE_SERVICE_ROLE_KEY` se quiser que a API grave os cadastros com uma chave privada. Se essa variavel nao existir, a API usa a anon key publica e a policy de insert anonimo criada na migracao.
+No servidor, configure `SUPABASE_SERVICE_ROLE_KEY` para que a API grave pedidos, relacione clientes ao checkout e baixe estoque pelo webhook do Mercado Pago.
+
+A migracao `005_orders_payment_flow.sql` estende `orders` e cria a funcao `complete_order_from_payment`, usada por `/api/webhook-mercadopago` quando o pagamento muda de status.

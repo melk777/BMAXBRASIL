@@ -1,15 +1,11 @@
-/**
- * Mercado Pago — Preferência (Checkout Pro) → { id }
- * Variáveis: MP_ACCESS_TOKEN (obrigatório)
- * MP_SITE_URL (opcional; senão usa host do request ou URL pública abaixo)
- */
-
 import { randomUUID } from 'crypto';
 
-/** Fallback das back_urls do MP quando o host do request não veio nos headers */
 const DEFAULT_PUBLIC_SITE_URL = 'https://bmaxbrasiloficial.com.br';
 const DEFAULT_SUPABASE_URL = 'https://oqveyejntxkltpfdydof.supabase.co';
 const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_QoEIfW1EYIu5Tqc7e6EHnw_TSnOfcF9';
+const SUPABASE_SERVICE_ROLE_KEY =
+  (process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.SUPABASE_SERVICE_ROLE_KEY.trim()) ||
+  (process.env.SUPABASE_SECRET_KEY && process.env.SUPABASE_SECRET_KEY.trim());
 
 function onlyDigits(value) {
   return String(value || '').replace(/\D/g, '');
@@ -17,6 +13,40 @@ function onlyDigits(value) {
 
 function cleanText(value, max = 160) {
   return String(value || '').trim().replace(/\s+/g, ' ').slice(0, max);
+}
+
+function supabaseUrl() {
+  return (process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL).replace(/\/$/, '');
+}
+
+function publicSupabaseKey() {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
+}
+
+function serviceHeaders(extra = {}) {
+  if (!SUPABASE_SERVICE_ROLE_KEY) return null;
+  return {
+    apikey: SUPABASE_SERVICE_ROLE_KEY,
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+    'Content-Type': 'application/json',
+    ...extra
+  };
+}
+
+async function supabaseServiceRequest(path, options = {}) {
+  const headers = serviceHeaders(options.headers || {});
+  if (!headers) return null;
+
+  const response = await fetch(`${supabaseUrl()}${path}`, {
+    ...options,
+    headers
+  });
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : null;
+  if (!response.ok) {
+    throw new Error(data?.message || data?.hint || data?.details || `Supabase ${response.status}`);
+  }
+  return data;
 }
 
 function validateCustomer(rawCustomer) {
@@ -40,12 +70,12 @@ function validateCustomer(rawCustomer) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('e-mail');
   if (!/^\d{10,11}$/.test(phone)) errors.push('telefone');
   if (!/^\d{8}$/.test(cep)) errors.push('CEP');
-  if (!address) errors.push('endereço');
-  if (!number) errors.push('número');
+  if (!address) errors.push('endereco');
+  if (!number) errors.push('numero');
   if (!neighborhood) errors.push('bairro');
   if (!city) errors.push('cidade');
   if (!/^[A-Z]{2}$/.test(state)) errors.push('estado');
-  if (!reference) errors.push('ponto de referência');
+  if (!reference) errors.push('ponto de referencia');
 
   if (errors.length) {
     return {
@@ -76,14 +106,57 @@ function validateCustomer(rawCustomer) {
   };
 }
 
-async function saveCustomerRegistration({ customer, produto, preco, preferenceId, externalReference }) {
-  const supabaseUrl = (process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL).replace(/\/$/, '');
-  const supabaseKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_ANON_KEY ||
-    DEFAULT_SUPABASE_ANON_KEY;
+async function getProduct(productId) {
+  if (!productId) return null;
+  const rows = await supabaseServiceRequest(
+    `/rest/v1/products?id=eq.${encodeURIComponent(productId)}&select=id,name,price,promotional_price,stock,status,tags,metadata`
+  );
+  return rows?.[0] || null;
+}
 
-  if (!supabaseUrl || !supabaseKey) {
+async function createPendingOrder({ product, productName, amount, color, quantity, customer }) {
+  const rows = await supabaseServiceRequest('/rest/v1/orders?select=id', {
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify({
+      product_id: product?.id || null,
+      customer_name: customer.fullName,
+      customer_email: customer.email,
+      customer_phone: customer.phone,
+      amount,
+      status: 'pending',
+      payment_provider: 'mercado_pago',
+      color: color || null,
+      quantity,
+      product_snapshot: {
+        name: product?.name || productName,
+        price: product?.price || amount,
+        promotional_price: product?.promotional_price || null,
+        tags: product?.tags || [],
+        metadata: product?.metadata || {}
+      },
+      customer_snapshot: customer
+    })
+  });
+
+  return rows?.[0] || null;
+}
+
+async function updatePendingOrder({ orderId, preferenceId, customerId, externalReference }) {
+  if (!orderId) return;
+  await supabaseServiceRequest(`/rest/v1/orders?id=eq.${encodeURIComponent(orderId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      customer_id: customerId || null,
+      preference_id: preferenceId,
+      external_reference: externalReference
+    })
+  });
+}
+
+async function saveCustomerRegistration({ customer, produto, preco, preferenceId, externalReference, orderId }) {
+  const supabaseKey = publicSupabaseKey();
+  if (!supabaseUrl() || !supabaseKey) {
     return { ok: false, skipped: true, reason: 'Supabase nao configurado' };
   }
 
@@ -108,12 +181,13 @@ async function saveCustomerRegistration({ customer, produto, preco, preferenceId
     source: 'checkout',
     metadata: {
       external_reference: externalReference,
+      order_id: orderId || null,
       user_agent: customer.userAgent || null
     }
   };
 
   try {
-    const response = await fetch(`${supabaseUrl}/rest/v1/customers`, {
+    const response = await fetch(`${supabaseUrl()}/rest/v1/customers`, {
       method: 'POST',
       headers: {
         apikey: supabaseKey,
@@ -136,78 +210,100 @@ async function saveCustomerRegistration({ customer, produto, preco, preferenceId
   }
 }
 
+function resolveSite(req) {
+  const forwarded = req.headers['x-forwarded-host'];
+  const forwardedProto = req.headers['x-forwarded-proto'];
+  const hostFirst = typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : '';
+  const fromRequest = hostFirst
+    ? `${forwardedProto === 'http' ? 'http' : 'https'}://${hostFirst}`
+    : '';
+
+  return (
+    (process.env.MP_SITE_URL && process.env.MP_SITE_URL.trim()) ||
+    fromRequest ||
+    DEFAULT_PUBLIC_SITE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '')
+  ).replace(/\/$/, '');
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Método não permitido' });
-  }
+  if (req.method === 'OPTIONS') return res.status(204).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Metodo nao permitido' });
 
   const token = process.env.MP_ACCESS_TOKEN && String(process.env.MP_ACCESS_TOKEN).trim();
   if (!token) {
     return res.status(503).json({
-      error: 'Pagamento não configurado',
-      message:
-        'Defina MP_ACCESS_TOKEN nas variáveis de ambiente do servidor (Mercado Pago → Credenciais).',
+      error: 'Pagamento nao configurado',
+      message: 'Defina MP_ACCESS_TOKEN nas variaveis de ambiente do servidor.',
       details: 'MP_ACCESS_TOKEN ausente'
     });
   }
 
-  let body = req.body;
+  const body = req.body;
   if (!body || typeof body !== 'object') {
-    return res.status(400).json({ error: 'Corpo da requisição inválido' });
+    return res.status(400).json({ error: 'Corpo da requisicao invalido' });
   }
 
   const { produto, valor, cliente } = body;
-  const preco = Number(typeof valor === 'string' ? valor.replace(',', '.') : valor);
-  if (!produto || Number.isNaN(preco) || preco <= 0) {
+  const productId = body.product_id || body.productId || null;
+  const quantity = Math.max(Number(body.quantity || 1), 1);
+  const color = cleanText(body.cor || body.color || '', 80);
+  const product = await getProduct(productId);
+  const productName = product?.name || produto;
+  const preco = product
+    ? Number(product.promotional_price || product.price)
+    : Number(typeof valor === 'string' ? valor.replace(',', '.') : valor);
+
+  if (product && product.status !== 'active') {
+    return res.status(409).json({ error: 'Produto indisponivel' });
+  }
+
+  if (product && Number(product.stock || 0) < quantity) {
+    return res.status(409).json({ error: 'Estoque insuficiente' });
+  }
+
+  if (!productName || Number.isNaN(preco) || preco <= 0) {
     return res.status(400).json({
-      error: 'Dados inválidos',
-      details: 'Informe produto (texto) e valor (número positivo).'
+      error: 'Dados invalidos',
+      details: 'Informe produto e valor positivo.'
     });
   }
 
   const customerResult = validateCustomer(cliente);
   if (!customerResult.ok) {
     return res.status(400).json({
-      error: 'Cadastro obrigatório',
+      error: 'Cadastro obrigatorio',
       details: customerResult.message
     });
   }
   const customer = customerResult.customer;
   customer.userAgent = req.headers['user-agent'] || null;
 
-  const forwarded = req.headers['x-forwarded-host'];
-  const forwardedProto = req.headers['x-forwarded-proto'];
-  const hostFirst =
-    typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : '';
-  const fromRequest = hostFirst
-    ? `${forwardedProto === 'http' ? 'http' : 'https'}://${hostFirst}`
-    : '';
+  const base = resolveSite(req);
+  const pendingOrder = await createPendingOrder({
+    product,
+    productName,
+    amount: preco,
+    color,
+    quantity,
+    customer
+  });
+  const externalReference = pendingOrder?.id || randomUUID();
+  const displayProduct = color ? `${productName} - Cor: ${color}` : productName;
+  const notify =
+    (process.env.MP_NOTIFICATION_URL && process.env.MP_NOTIFICATION_URL.trim()) ||
+    `${base}/api/webhook-mercadopago`;
 
-  /* MP_SITE_URL → host real da requisição (domínio customizado) → domínio oficial.
-     Nunca priorizar VERCEL_URL aqui: na Vercel ele é sempre *.vercel.app e o MP
-     redireciona “voltar à loja” para o deploy em vez do site. */
-  const site =
-    (process.env.MP_SITE_URL && process.env.MP_SITE_URL.trim()) ||
-    fromRequest ||
-    DEFAULT_PUBLIC_SITE_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
-
-  const base = site.replace(/\/$/, '');
-  const externalReference = randomUUID();
   const preferenceBody = {
     items: [
       {
-        title: String(produto).slice(0, 256),
+        title: String(displayProduct).slice(0, 256),
         unit_price: preco,
-        quantity: 1,
+        quantity,
         currency_id: 'BRL'
       }
     ],
@@ -242,7 +338,10 @@ export default async function handler(req, res) {
       entrega_cidade: customer.city,
       entrega_estado: customer.state,
       entrega_ponto_referencia: customer.reference,
-      produto: String(produto).slice(0, 256)
+      produto: String(displayProduct).slice(0, 256),
+      product_id: product?.id || productId || null,
+      order_id: pendingOrder?.id || null,
+      color: color || null
     },
     external_reference: externalReference,
     back_urls: {
@@ -251,15 +350,11 @@ export default async function handler(req, res) {
       pending: `${base}/?status=pendente`
     },
     auto_return: 'approved',
+    notification_url: notify,
     payment_methods: {
       installments: 12
     }
   };
-
-  const notify = process.env.MP_NOTIFICATION_URL && process.env.MP_NOTIFICATION_URL.trim();
-  if (notify) {
-    preferenceBody.notification_url = notify;
-  }
 
   try {
     const mpRes = await fetch('https://api.mercadopago.com/checkout/preferences', {
@@ -273,15 +368,14 @@ export default async function handler(req, res) {
     });
 
     const data = await mpRes.json().catch(() => ({}));
-
     if (!mpRes.ok) {
       const msg =
         data.message ||
         data.error ||
-        (Array.isArray(data.cause) && data.cause.map((c) => c.description || c.code).join('; ')) ||
+        (Array.isArray(data.cause) && data.cause.map((cause) => cause.description || cause.code).join('; ')) ||
         mpRes.statusText;
       return res.status(502).json({
-        error: 'Mercado Pago recusou a preferência',
+        error: 'Mercado Pago recusou a preferencia',
         details: msg,
         status: mpRes.status
       });
@@ -290,29 +384,38 @@ export default async function handler(req, res) {
     if (!data.id) {
       return res.status(502).json({
         error: 'Resposta inesperada do Mercado Pago',
-        details: 'A API não retornou id da preferência.',
+        details: 'A API nao retornou id da preferencia.',
         raw: data
       });
     }
 
     const customerRegistration = await saveCustomerRegistration({
       customer,
-      produto,
+      produto: displayProduct,
       preco,
       preferenceId: data.id,
-      externalReference
+      externalReference,
+      orderId: pendingOrder?.id || null
     });
 
     if (!customerRegistration.ok) {
       return res.status(502).json({
-        error: 'Cadastro não salvo no painel',
-        message: 'Não foi possível registrar os dados do cliente no painel administrativo. Confira se a migração 004_customers.sql foi executada no Supabase.',
+        error: 'Cadastro nao salvo no painel',
+        message: 'Nao foi possivel registrar os dados do cliente no painel administrativo. Confira as migrations do Supabase.',
         details: customerRegistration.details || customerRegistration.reason || 'Falha ao gravar cliente no Supabase.'
       });
     }
 
+    await updatePendingOrder({
+      orderId: pendingOrder?.id,
+      preferenceId: data.id,
+      customerId: customerRegistration.customerId || null,
+      externalReference
+    });
+
     return res.status(200).json({
       id: data.id,
+      order_id: pendingOrder?.id || null,
       customer_registered: true,
       customer_id: customerRegistration.customerId || null
     });

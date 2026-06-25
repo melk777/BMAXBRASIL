@@ -581,12 +581,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function selectedCheckoutProduct(button) {
         const nomeBase = button.getAttribute('data-produto');
         const preco = button.getAttribute('data-valor');
+        const productId = button.getAttribute('data-product-id');
         const idCor = button.getAttribute('data-cor-id');
         const seletor = idCor ? document.getElementById(idCor) : null;
         const cor = seletor ? seletor.value.trim() : '';
         return {
             produto: `${nomeBase} — Cor: ${cor}`,
-            preco
+            preco,
+            productId,
+            cor
         };
     }
 
@@ -596,7 +599,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const modal = ensureCheckoutRegistrationModal();
-        const { produto, preco } = selectedCheckoutProduct(button);
+        const { produto, preco, productId, cor } = selectedCheckoutProduct(button);
         const value = Number(String(preco).replace(',', '.'));
         const formattedValue = Number.isFinite(value)
             ? value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -626,6 +629,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({
                     produto,
                     valor: Number(String(preco).replace(',', '.')),
+                    product_id: productId || undefined,
+                    cor: cor || undefined,
+                    quantity: 1,
                     cliente
                 })
             });

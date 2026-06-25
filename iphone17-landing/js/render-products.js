@@ -62,6 +62,7 @@
         <a href="javascript:void(0)"
           class="btn primary-btn btn-glow btn-reserva-venda"
           data-produto="${escapeHtml(product.name)}"
+          data-product-id="${escapeHtml(product.id)}"
           data-valor="${Number(checkoutPrice || 0).toFixed(2)}"
           data-cor-id="${colorSelectId}">RESERVAR UNIDADE</a>
       </div>
