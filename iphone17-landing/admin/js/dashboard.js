@@ -8,6 +8,7 @@
     qs('#stat-active-products').textContent = stats.activeProducts;
     qs('#stat-stock').textContent = stats.stock;
     qs('#stat-orders').textContent = stats.orders;
+    qs('#stat-customers').textContent = stats.customers || 0;
     qs('#recent-products').innerHTML = stats.recentProducts
       .map((product) => `
         <div class="flex items-center justify-between gap-3 py-3">
