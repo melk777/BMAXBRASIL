@@ -8,6 +8,8 @@ import { randomUUID } from 'crypto';
 
 /** Fallback das back_urls do MP quando o host do request não veio nos headers */
 const DEFAULT_PUBLIC_SITE_URL = 'https://bmaxbrasiloficial.com.br';
+const DEFAULT_SUPABASE_URL = 'https://oqveyejntxkltpfdydof.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_QoEIfW1EYIu5Tqc7e6EHnw_TSnOfcF9';
 
 function onlyDigits(value) {
   return String(value || '').replace(/\D/g, '');
@@ -74,6 +76,66 @@ function validateCustomer(rawCustomer) {
   };
 }
 
+async function saveCustomerRegistration({ customer, produto, preco, preferenceId, externalReference }) {
+  const supabaseUrl = (process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL).replace(/\/$/, '');
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    DEFAULT_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    return { ok: false, skipped: true, reason: 'Supabase nao configurado' };
+  }
+
+  const row = {
+    full_name: customer.fullName,
+    cpf: customer.cpf,
+    email: customer.email,
+    phone: customer.phone,
+    cep: customer.cep,
+    address: customer.address,
+    number: customer.number,
+    complement: customer.complement,
+    neighborhood: customer.neighborhood,
+    city: customer.city,
+    state: customer.state,
+    reference_point: customer.reference,
+    product_name: String(produto).slice(0, 256),
+    product_amount: preco,
+    payment_provider: 'mercado_pago',
+    payment_preference_id: preferenceId,
+    payment_status: 'checkout_created',
+    source: 'checkout',
+    metadata: {
+      external_reference: externalReference,
+      user_agent: customer.userAgent || null
+    }
+  };
+
+  try {
+    const response = await fetch(`${supabaseUrl}/rest/v1/customers`, {
+      method: 'POST',
+      headers: {
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation'
+      },
+      body: JSON.stringify(row)
+    });
+
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      console.error('customer registration insert:', data || response.statusText);
+      return { ok: false, status: response.status, details: data };
+    }
+    return { ok: true, customerId: Array.isArray(data) ? data[0]?.id : data?.id };
+  } catch (error) {
+    console.error('customer registration insert:', error);
+    return { ok: false, details: error.message || String(error) };
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -119,6 +181,7 @@ export default async function handler(req, res) {
     });
   }
   const customer = customerResult.customer;
+  customer.userAgent = req.headers['user-agent'] || null;
 
   const forwarded = req.headers['x-forwarded-host'];
   const forwardedProto = req.headers['x-forwarded-proto'];
@@ -138,6 +201,7 @@ export default async function handler(req, res) {
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
 
   const base = site.replace(/\/$/, '');
+  const externalReference = randomUUID();
   const preferenceBody = {
     items: [
       {
@@ -180,7 +244,7 @@ export default async function handler(req, res) {
       entrega_ponto_referencia: customer.reference,
       produto: String(produto).slice(0, 256)
     },
-    external_reference: randomUUID(),
+    external_reference: externalReference,
     back_urls: {
       success: `${base}/?status=aprovado`,
       failure: `${base}/?status=rejeitado`,
@@ -231,7 +295,19 @@ export default async function handler(req, res) {
       });
     }
 
-    return res.status(200).json({ id: data.id });
+    const customerRegistration = await saveCustomerRegistration({
+      customer,
+      produto,
+      preco,
+      preferenceId: data.id,
+      externalReference
+    });
+
+    return res.status(200).json({
+      id: data.id,
+      customer_registered: Boolean(customerRegistration.ok),
+      customer_id: customerRegistration.customerId || null
+    });
   } catch (err) {
     console.error('checkout preferences:', err);
     return res.status(500).json({
